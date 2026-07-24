@@ -14,7 +14,12 @@ export class OrderQueryService {
 
   async getOrders(tenantId: string, filters?: OrderFilterOptions) {
     const take = filters?.limit ?? 50;
-    return this.orderRepo.findByTenant(tenantId, take);
+    return this.orderRepo.findByTenant(
+      tenantId,
+      take,
+      filters?.status,
+      filters?.search,
+    );
   }
 
   async getOrderById(tenantId: string, orderId: string) {

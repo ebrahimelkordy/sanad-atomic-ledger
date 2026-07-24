@@ -1,4 +1,8 @@
-const BASE_URL = 'http://localhost:3001';
+const BASE_URL = (typeof window !== 'undefined'
+  ? (window as any).NEXT_PUBLIC_API_BASE_URL
+  : undefined)
+  || process.env.NEXT_PUBLIC_API_BASE_URL
+  || 'http://localhost:3001';
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -54,7 +58,15 @@ export const api = {
     }),
 
   // Orders
-  getOrders: () => request<any[]>('/orders'),
+  getOrders: (filters?: { status?: string; search?: string; page?: number; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.search) params.set('search', filters.search);
+    if (filters?.page) params.set('page', String(filters.page));
+    if (filters?.limit) params.set('limit', String(filters.limit));
+    const qs = params.toString();
+    return request<any[]>(`/orders${qs ? `?${qs}` : ''}`);
+  },
 
   getOrderById: (id: string) => request<any>(`/orders/${id}`),
 

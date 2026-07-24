@@ -121,16 +121,16 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
           <p className="text-sm text-muted-foreground">تفاصيل الفاتورة وسجل المراجعة</p>
         </div>
         <Badge
-          className={`self-start text-sm px-3 py-1 ${order?.status === "CONFIRMED"
-              ? "bg-success text-success-foreground"
-              : order?.status === "PENDING"
-                ? "bg-warning text-warning-foreground"
-                : order?.status === "REJECTED_INSUFFICIENT_STOCK" || order?.status === "CANCELLED"
-                  ? "bg-destructive text-destructive-foreground"
-                  : "bg-secondary text-secondary-foreground"
+          className={`self-start text-sm px-3 py-1 ${order?.order_status === "CONFIRMED"
+            ? "bg-success text-success-foreground"
+            : order?.order_status === "PENDING"
+              ? "bg-warning text-warning-foreground"
+              : order?.order_status === "REJECTED_INSUFFICIENT_STOCK" || order?.order_status === "CANCELLED"
+                ? "bg-destructive text-destructive-foreground"
+                : "bg-secondary text-secondary-foreground"
             }`}
         >
-          {order?.status || "—"}
+          {order?.order_status || "—"}
         </Badge>
       </div>
 
@@ -152,18 +152,18 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {order?.details && order.details.length > 0 ? (
-                    order.details.map((detail: any, idx: number) => (
+                  {order?.order_details && order.order_details.length > 0 ? (
+                    order.order_details.map((detail: any, idx: number) => (
                       <TableRow key={idx}>
                         <TableCell className="font-medium">
-                          {detail.product_name || detail.productId || "—"}
+                          {detail.product_id || "—"}
                         </TableCell>
-                        <TableCell>{detail.quantity}</TableCell>
+                        <TableCell>{detail.quantity_ordered}</TableCell>
                         <TableCell className="tabular">
-                          EGP {Number(detail.unit_price_at_order || detail.unitPrice || 0).toFixed(2)}
+                          EGP {Number(detail.unit_price_at_order || 0).toFixed(2)}
                         </TableCell>
                         <TableCell className="tabular font-semibold">
-                          EGP {Number((detail.unit_price_at_order || detail.unitPrice || 0) * detail.quantity).toFixed(2)}
+                          EGP {Number((detail.unit_price_at_order || 0) * detail.quantity_ordered).toFixed(2)}
                         </TableCell>
                       </TableRow>
                     ))
@@ -182,8 +182,8 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
                 <div className="text-left">
                   <p className="text-sm text-muted-foreground">الإجمالي الكلي</p>
                   <p className="text-2xl font-bold text-success tabular">
-                    EGP {order?.total || order?.totalAmount
-                      ? Number(order?.total || order?.totalAmount || 0).toFixed(2)
+                    EGP {order?.grand_total
+                      ? Number(order.grand_total).toFixed(2)
                       : "0.00"}
                   </p>
                 </div>
@@ -228,7 +228,7 @@ function OrderDetailsContent({ orderId }: { orderId: string }) {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-xs text-muted-foreground">رقم واتساب</p>
-                <p className="font-semibold tabular">{order?.customer_identifier || "—"}</p>
+                <p className="font-semibold tabular">{order?.customer_whatsapp || "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">حالة الدفع</p>

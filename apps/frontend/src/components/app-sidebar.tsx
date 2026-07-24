@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -44,6 +45,8 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const currentPath = usePathname();
+  const { logout } = useAuth();
+  const router = useRouter();
   const isActive = (path: string) =>
     path === "/dashboard" ? currentPath === "/dashboard" : currentPath.startsWith(path);
 
@@ -108,7 +111,7 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="خروج">
+            <SidebarMenuButton tooltip="خروج" onClick={() => { logout(); router.push('/login'); }}>
               <LogOut className="h-4 w-4" />
               {!collapsed && <span>خروج</span>}
             </SidebarMenuButton>

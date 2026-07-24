@@ -103,9 +103,27 @@ export class CustomerOrderRepository {
     });
   }
 
-  async findByTenant(tenantId: string, take = 50): Promise<CustomerOrder[]> {
+  async findByTenant(
+    tenantId: string,
+    take = 50,
+    status?: string,
+    search?: string,
+  ): Promise<CustomerOrder[]> {
+    const where: Prisma.CustomerOrderWhereInput = { tenant_id: tenantId };
+
+    if (status) {
+      where.order_status = status as OrderStatus;
+    }
+
+    if (search) {
+      where.OR = [
+        { customer_whatsapp: { contains: search, mode: 'insensitive' } },
+        { raw_message_text: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
     return this.prisma.customerOrder.findMany({
-      where: { tenant_id: tenantId },
+      where,
       orderBy: { created_at: 'desc' },
       take,
     });

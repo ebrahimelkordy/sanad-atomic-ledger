@@ -51,7 +51,10 @@ export default function OrdersPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getOrders();
+      const data = await api.getOrders({
+        status: statusFilter !== "ALL" ? statusFilter : undefined,
+        search: search || undefined,
+      });
       setOrders(data);
     } catch (err: any) {
       setError(err.message || "فشل تحميل الأوردرات");
@@ -68,6 +71,11 @@ export default function OrdersPage() {
     e.preventDefault();
     fetchOrders();
   };
+
+  // Re-fetch when filters change
+  useEffect(() => {
+    if (!loading) fetchOrders();
+  }, [statusFilter]);
 
   return (
     <div className="space-y-6">
@@ -154,22 +162,22 @@ export default function OrdersPage() {
               </TableHeader>
               <TableBody>
                 {orders.map((order: any, idx: number) => {
-                  const statusInfo = STATUS_BADGE[order.status as string] || {
+                  const statusInfo = STATUS_BADGE[order.order_status as string] || {
                     variant: "default" as const,
                     className: "",
                   };
                   return (
                     <TableRow key={order.id || idx}>
                       <TableCell className="font-mono tabular text-xs">{order.id?.slice(0, 8) || idx + 1}</TableCell>
-                      <TableCell className="font-medium">{order.customer_identifier || "—"}</TableCell>
+                      <TableCell className="font-medium">{order.customer_whatsapp || "—"}</TableCell>
                       <TableCell>
                         <Badge variant={statusInfo.variant} className={statusInfo.className}>
-                          {order.status || "—"}
+                          {order.order_status || "—"}
                         </Badge>
                       </TableCell>
                       <TableCell className="tabular font-semibold">
-                        EGP {order.total || order.totalAmount
-                          ? Number(order.total || order.totalAmount || 0).toFixed(2)
+                        EGP {order.grand_total
+                          ? Number(order.grand_total).toFixed(2)
                           : "0.00"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground tabular">

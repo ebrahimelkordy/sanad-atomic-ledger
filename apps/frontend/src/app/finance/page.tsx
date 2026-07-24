@@ -70,10 +70,10 @@ export default function FinancePage() {
 
   // Compute aggregate stats from summary
   const totalReceivables = Array.isArray(summary)
-    ? summary.reduce((sum: number, s: any) => sum + Number(s.outstanding || s.balance || 0), 0)
+    ? summary.reduce((sum: number, s: any) => sum + Math.max(0, Number(s.running_balance || 0)), 0)
     : 0;
   const totalDue = Array.isArray(summary)
-    ? summary.reduce((sum: number, s: any) => sum + (s.overdue ? Number(s.overdue) : 0), 0)
+    ? summary.reduce((sum: number, s: any) => sum + Math.max(0, -Number(s.running_balance || 0)), 0)
     : 0;
 
   return (
@@ -173,12 +173,12 @@ export default function FinancePage() {
                   <TableRow key={s.party_identifier || idx}>
                     <TableCell className="font-medium">{s.party_identifier || "—"}</TableCell>
                     <TableCell className="tabular font-semibold">
-                      <span className={Number(s.outstanding || s.balance || 0) < 0 ? "text-destructive" : "text-success"}>
-                        EGP {Number(s.outstanding || s.balance || 0).toFixed(2)}
+                      <span className={Number(s.running_balance || 0) < 0 ? "text-destructive" : "text-success"}>
+                        EGP {Number(s.running_balance || 0).toFixed(2)}
                       </span>
                     </TableCell>
                     <TableCell className="tabular text-sm text-muted-foreground">
-                      {s.last_updated ? new Date(s.last_updated).toLocaleDateString("ar-EG") : "—"}
+                      {s.last_recalculated_at ? new Date(s.last_recalculated_at).toLocaleDateString("ar-EG") : "—"}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -250,12 +250,12 @@ export default function FinancePage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="font-medium">{entry.party_identifier || "—"}</TableCell>
-                    <TableCell className="text-sm">{entry.description || "—"}</TableCell>
+                    <TableCell className="text-sm">{entry.entry_type === "DEBIT" ? "مدين" : entry.entry_type === "CREDIT" ? "دائن" : "—"}</TableCell>
                     <TableCell className="tabular text-destructive font-semibold">
-                      {entry.debit ? `EGP ${Number(entry.debit).toFixed(2)}` : "—"}
+                      {entry.entry_type === "DEBIT" ? `EGP ${Number(entry.amount).toFixed(2)}` : "—"}
                     </TableCell>
                     <TableCell className="tabular text-success font-semibold">
-                      {entry.credit ? `EGP ${Number(entry.credit).toFixed(2)}` : "—"}
+                      {entry.entry_type === "CREDIT" ? `EGP ${Number(entry.amount).toFixed(2)}` : "—"}
                     </TableCell>
                   </TableRow>
                 ))}

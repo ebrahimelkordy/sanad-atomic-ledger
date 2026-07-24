@@ -155,16 +155,16 @@ export default function TenantsPage() {
           <CardContent className="space-y-3">
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">اسم الأعمال</span>
-              <span className="text-sm font-semibold">{tenant?.businessName || tenant?.name || "—"}</span>
+              <span className="text-sm font-semibold">{tenant?.business_name || tenant?.businessName || "—"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">نوع النشاط</span>
-              <span className="text-sm font-semibold">{tenant?.verticalType || "—"}</span>
+              <span className="text-sm font-semibold">{tenant?.vertical_type || tenant?.verticalType || "—"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">تاريخ التسجيل</span>
               <span className="text-sm font-semibold tabular">
-                {tenant?.createdAt ? new Date(tenant.createdAt).toLocaleDateString("ar-EG") : "—"}
+                {tenant?.created_at ? new Date(tenant.created_at).toLocaleDateString("ar-EG") : tenant?.createdAt ? new Date(tenant.createdAt).toLocaleDateString("ar-EG") : "—"}
               </span>
             </div>
           </CardContent>
@@ -258,19 +258,19 @@ export default function TenantsPage() {
               </TableHeader>
               <TableBody>
                 {numbers.map((num: any, idx: number) => {
-                  const status = STATUS_BADGE[num.status as string] || {
+                  const status = STATUS_BADGE[num.connection_status as string] || {
                     variant: "secondary" as const,
-                    label: num.status || "—",
+                    label: num.connection_status || "—",
                   };
                   return (
                     <TableRow key={num.id || idx}>
-                      <TableCell className="font-mono tabular">{num.whatsapp_number || num.number || "—"}</TableCell>
-                      <TableCell>{num.number_role || num.role || "—"}</TableCell>
+                      <TableCell className="font-mono tabular">{num.phone_number || num.whatsapp_number || "—"}</TableCell>
+                      <TableCell>{num.number_role || "—"}</TableCell>
                       <TableCell>
                         <Badge variant={status.variant}>{status.label}</Badge>
                       </TableCell>
                       <TableCell>
-                        {num.status === "PENDING_QR_SCAN" ? (
+                        {num.connection_status === "PENDING_QR_SCAN" ? (
                           <Button variant="outline" size="sm" disabled>
                             <QrCode className="ml-2 h-4 w-4" />
                             QR — قريباً
