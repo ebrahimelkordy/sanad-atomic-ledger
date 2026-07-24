@@ -1,0 +1,29 @@
+export enum VerticalType {
+  RESTAURANT = 'RESTAURANT',
+  PHARMACY = 'PHARMACY',
+  RETAIL = 'RETAIL',
+}
+
+export enum NumberRole {
+  PUBLIC_SALES = 'PUBLIC_SALES',
+  AUTHORIZED_FINANCE = 'AUTHORIZED_FINANCE',
+}
+
+export enum OrderStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  REJECTED_INSUFFICIENT_STOCK = 'REJECTED_INSUFFICIENT_STOCK',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum LedgerEntryType {
+  DEBIT = 'DEBIT',
+  CREDIT = 'CREDIT',
+}
+
+export enum PendingSettlementStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  REJECTED = 'REJECTED',
+  EXPIRED = 'EXPIRED',
+}
