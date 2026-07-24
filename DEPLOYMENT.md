@@ -73,26 +73,66 @@ npm run dev:frontend
 
 ---
 
-## ☁️ 3. النشر على السحابة
+## ☁️ 3. النشر على السحابة (بدون فيزا)
 
-### 3.1 Frontend → Vercel
+### 3.1 Frontend → Vercel (مجاني — مش محتاج فيزا)
 
-1. ارفع الكود على GitHub
-2. اربط المستودع بـ Vercel
-3. أضف متغير البيئة:
-   - `NEXT_PUBLIC_API_BASE_URL` = رابط الباك إند (مثال: `https://cipher-api.onrender.com`)
+1. ارفع الكود على GitHub (خلصناها ✅)
+2. روح على [vercel.com](https://vercel.com) وسجل دخول بـ GitHub
+3. اضغط **Add New → Project** واختار `sanad-atomic-ledger`
+4. في **Environment Variables**، أضف:
+   - `NEXT_PUBLIC_API_BASE_URL` = رابط الباك إند (هتعرفه من الخطوة اللي بعد كده)
+5. **Vercel مش محتاج فيزا للـ free tier** — يشتغل على طول
 
-### 3.2 Backend → Render.com (مجاني)
+### 3.2 Backend → بدائل مجانية (مش محتاجة فيزا)
 
-1. اعمل **New Web Service** واربط المستودع
-2. اختار **Docker** كطريقة بناء
-3. خلي **Root Directory** فاضي
-4. Docker Command: (سيتم استعمال الـ Dockerfile تلقائياً)
-5. أضف متغيرات البيئة (شوف `.env.example`)
+#### 🅰️ الطريقة الأولى: Oracle Cloud Free Tier (الأفضل — دائم مجاني)
+- مش محتاج فيزا (فقط حساب بريد إلكتروني)
+- يعطيك VM مجاني ARM بـ 4 CPUs + 24GB RAM + PostgreSQL تقدر تنصبه بنفسك
+- تقدر تنصب Docker وتشغل الـ docker-compose.yml بتاعنا بالكامل
+- شرح: [oracle.com/cloud/free](https://www.oracle.com/cloud/free/)
 
-#### خدمات مجانية إضافية:
-- **PostgreSQL**: اعمل Database على Render (مجاني 1GB)
-- **Redis**: استخدم [Upstash](https://upstash.com) (مجاني 100MB)
+#### 🅱️ الطريقة الثانية: Koyeb (بديل Render — مجاني بدون فيزا)
+1. سجل على [koyeb.com](https://koyeb.com) بـ GitHub (مش محتاج فيزا)
+2. اعمل **App** جديد من المستودع بتاعنا
+3. اختار **Docker** كطريقة بناء
+4. أضف متغيرات البيئة
+5. خدمة PostgreSQL من Koyeb مجانية 1GB
+
+#### 🅲 الطريقة الثالثة: Fly.io (مجاني بدون فيزا للحسابات الأولى)
+1. سجل على [fly.io](https://fly.io) بـ GitHub
+2. `flyctl launch` من terminal
+3. `flyctl postgres create` لعمل PostgreSQL
+4. `flyctl deploy` للباك إند
+
+### 3.3 خدمات مجانية للمساعدة
+
+| الخدمة | الشرح | الرابط |
+|--------|-------|--------|
+| **Upstash Redis** | Redis مجاني 100MB — مش محتاج فيزا | [upstash.com](https://upstash.com) |
+| **Neon.tech** | PostgreSQL مجاني — مش محتاج فيزا | [neon.tech](https://neon.tech) |
+| **Aiven** | PostgreSQL مجاني — محتاج فيزا للتفعيل | [aiven.io](https://aiven.io) |
+
+### 3.4 الطريقة الرابعة: Tunnel (Localhost → Internet) — أسهل حاجة للتجربة
+
+لو عايز تختبر المشروع بسرعة من غير ما تنشر على سحابة:
+
+```bash
+# شغل الباك إند محلياً (localhost:3001)
+cd apps/backend && npm run start:dev
+
+# في Terminal تاني، استخدم bore (بديل ngrok مجاني مفتوح المصدر)
+npx bore local 3001 --to bore.pub
+
+# هيطلعلك رابط زي: https://cipher-xxxx.bore.pub
+# حط الرابط ده في Vercel كـ NEXT_PUBLIC_API_BASE_URL
+```
+
+**أدوات Tunnel مجانية (مش محتاجة فيزا):**
+- **bore** — مجاني، مفتوح المصدر، ما فيه أي تسجيل — `npx bore local 3001 --to bore.pub`
+- **localtunnel** — مجاني — `npx lt --port 3001`
+- **cloudflared** — مجاني من Cloudflare — `cloudflared tunnel --url http://localhost:3001`
+- **Ngrok** — مجاني (بس محتاج تسجيل بسيط) — `ngrok http 3001`
 
 ---
 
@@ -161,5 +201,3 @@ cd apps/backend && npx prisma migrate deploy
 # Docker: بناء وإعادة تشغيل
 docker compose build backend
 docker compose up -d
-```
-

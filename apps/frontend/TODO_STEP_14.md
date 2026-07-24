@@ -19,7 +19,7 @@
 
 ## ✅ Phase 3: Build Verification
 
-### Step 11 — Run `npm run build` for backend 🔄 (جاري)
+### Step 11 — Run `npm run build` for backend ⬜
 ### Step 12 — Run `npm run build` for frontend ⬜
-### Step 13 — Git push to GitHub ⬜
-
+### Step 13 — Git push to GitHub ✅
+### Step 14 — Update DEPLOYMENT.md with free alternatives (no credit card needed) ✅
