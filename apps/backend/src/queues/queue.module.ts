@@ -14,13 +14,26 @@ import { IncomingMessageProcessor } from './incoming-message.processor';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const host = config.get<string>('REDIS_HOST', '127.0.0.1');
+        // دعم Upstash Redis عبر REDIS_URL (rediss://) أو Redis محلي عبر REDIS_HOST + REDIS_PORT
+        const redisUrl = config.get<string>('REDIS_URL');
+        
+        if (redisUrl) {
+          // استخدام رابط Upstash مباشرة (rediss://...)
+          return {
+            connection: {
+              url: redisUrl,
+              tls: redisUrl.startsWith('rediss://') ? {} : undefined,
+            },
+          };
+        }
+
+        // Redis محلي (docker-compose)
+        const host = config.get<string>('REDIS_HOST', 'localhost');
         const port = config.get<number>('REDIS_PORT', 6379);
         return {
           connection: {
             host,
             port,
-            skipVersionCheck: true,
           },
         };
       },
