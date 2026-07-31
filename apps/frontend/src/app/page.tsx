@@ -1,8 +1,28 @@
-export default function HomePage() {
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export default function RootRedirectPage() {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/dashboard");
+    } else {
+      router.push("/login");
+    }
+  }, [isAuthenticated, router]);
+
   return (
-    <main style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>Cipher</h1>
-      <p>Welcome to the Cipher workspace.</p>
-    </main>
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-3">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-32" />
+      </div>
+    </div>
   );
 }

@@ -128,4 +128,19 @@ export class BaileysSessionManagerService {
       (session) => session.tenantId === tenantId,
     );
   }
+
+  async requestPairingCode(phoneNumber: string): Promise<string> {
+    const sessionKey = this.getSessionKey(phoneNumber);
+    const session = this.sessions.get(sessionKey);
+    if (!session) {
+      throw new Error('الجلسة غير مسجلة، يرجى تهيئة الرقم أولاً');
+    }
+
+    if (session.socket.authState.creds.registered) {
+      return 'تم اقتران الرقم ومسجل بالفعل!';
+    }
+
+    const code = await session.socket.requestPairingCode(phoneNumber.replace(/[^0-9]/g, ''));
+    return code;
+  }
 }

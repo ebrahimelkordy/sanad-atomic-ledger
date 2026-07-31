@@ -6,6 +6,35 @@ import { PrismaService } from './prisma.service';
 export class InventoryProductRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findByTenantId(tenantId: string): Promise<InventoryProduct[]> {
+    return this.prisma.inventoryProduct.findMany({
+      where: { tenant_id: tenantId },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async createProduct(data: {
+    tenant_id: string;
+    sku: string;
+    name: string;
+    unit_price: number;
+    cost_price?: number;
+    current_stock: number;
+    vertical_metadata?: Record<string, unknown>;
+  }): Promise<InventoryProduct> {
+    return this.prisma.inventoryProduct.create({
+      data: {
+        tenant_id: data.tenant_id,
+        sku: data.sku,
+        name: data.name,
+        unit_price: data.unit_price,
+        cost_price: data.cost_price ?? 0,
+        current_stock: data.current_stock,
+        vertical_metadata: (data.vertical_metadata ?? {}) as Prisma.InputJsonValue,
+      },
+    });
+  }
+
   async findByTenantAndSku(
     tenantId: string,
     sku: string,

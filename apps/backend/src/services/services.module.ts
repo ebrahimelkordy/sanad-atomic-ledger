@@ -7,6 +7,10 @@ import { TenantQueryService } from './tenant-query.service';
 import { OrderQueryService } from './order-query.service';
 import { FinanceQueryService } from './finance-query.service';
 import { PendingSettlementExpiryService } from './pending-settlement-expiry.service';
+import { SalesService } from './sales.service';
+import { EmployeeService } from './employee.service';
+import { CustomerService } from './customer.service';
+import { ChatService } from './chat.service';
 import { AiOrchestratorModule } from '../ai-orchestrator/ai-orchestrator.module';
 
 @Global()
@@ -21,6 +25,10 @@ import { AiOrchestratorModule } from '../ai-orchestrator/ai-orchestrator.module'
     OrderQueryService,
     FinanceQueryService,
     PendingSettlementExpiryService,
+    SalesService,
+    EmployeeService,
+    CustomerService,
+    ChatService,
   ],
   exports: [
     OrderProcessorService,
@@ -31,6 +39,10 @@ import { AiOrchestratorModule } from '../ai-orchestrator/ai-orchestrator.module'
     OrderQueryService,
     FinanceQueryService,
     PendingSettlementExpiryService,
+    SalesService,
+    EmployeeService,
+    CustomerService,
+    ChatService,
     AiOrchestratorModule,
   ],
 })

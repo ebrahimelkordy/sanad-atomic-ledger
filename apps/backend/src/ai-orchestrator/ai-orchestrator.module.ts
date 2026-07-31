@@ -3,6 +3,7 @@ import { AIProviderFactory } from './ai-provider.factory';
 import { GeminiProvider } from './gemini.provider';
 import { OpenAIProvider } from './openai.provider';
 import { LocalModelProvider } from './local-model.provider';
+import { GroqProvider } from './groq.provider';
 import { AIOrchestrationService } from '../services/ai-orchestration.service';
 
 @Module({
@@ -11,8 +12,9 @@ import { AIOrchestrationService } from '../services/ai-orchestration.service';
     GeminiProvider,
     OpenAIProvider,
     LocalModelProvider,
+    GroqProvider,
     AIOrchestrationService,
   ],
-  exports: [AIOrchestrationService],
+  exports: [AIOrchestrationService, AIProviderFactory],
 })
 export class AiOrchestratorModule {}

@@ -80,7 +80,7 @@ describe('Financial Ledger Reconciliation', () => {
 
       mockTx.run.mockImplementation(async (fn: any) => fn());
       mockLedgerRepo.appendLedgerEntry.mockResolvedValue({
-        id: 'le-1', ...pending,
+        ...pending, id: 'le-1',
         authorized_action_by: MANAGER,
       });
 
@@ -124,7 +124,7 @@ describe('Financial Ledger Reconciliation', () => {
 
       mockTx.run.mockImplementation(async (fn: any) => fn());
       mockLedgerRepo.appendLedgerEntry.mockResolvedValue({
-        id: 'le-2', ...pending, authorized_action_by: MANAGER,
+        ...pending, id: 'le-2', authorized_action_by: MANAGER,
       });
 
       await service.confirmSettlement(TENANT_ID, MANAGER, 'تأكيد');
@@ -167,7 +167,7 @@ describe('Financial Ledger Reconciliation', () => {
 
       mockTx.run.mockImplementation(async (fn: any) => fn());
       mockLedgerRepo.appendLedgerEntry.mockResolvedValue({
-        id: 'le-3', ...pending, authorized_action_by: MANAGER,
+        ...pending, id: 'le-3', authorized_action_by: MANAGER,
       });
 
       await service.confirmSettlement(TENANT_ID, MANAGER, 'تأكيد');

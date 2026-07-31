@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +23,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, Search, AlertCircle, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { RefreshCw, AlertCircle, TrendingUp, TrendingDown, DollarSign, Plus } from "lucide-react";
 
 export default function FinancePage() {
   const [summary, setSummary] = useState<any[]>([]);
@@ -32,6 +41,14 @@ export default function FinancePage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedParty, setSelectedParty] = useState("");
   const [ledgerSearch, setLedgerSearch] = useState("");
+
+  // Manual entry state
+  const [entryOpen, setEntryOpen] = useState(false);
+  const [entryParty, setEntryParty] = useState("");
+  const [entryType, setEntryType] = useState<"DEBIT" | "CREDIT">("DEBIT");
+  const [entryAmount, setEntryAmount] = useState("");
+  const [entrySubmitting, setEntrySubmitting] = useState(false);
+  const [entryMsg, setEntryMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchSummary = async () => {
     setLoading(true);
@@ -68,6 +85,26 @@ export default function FinancePage() {
     fetchLedger(value === "ALL" ? undefined : value);
   };
 
+  const handleManualEntry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!entryParty || !entryAmount) return;
+    setEntrySubmitting(true);
+    setEntryMsg(null);
+    try {
+      await api.createManualEntry(entryParty, entryType, parseFloat(entryAmount));
+      setEntryMsg({ type: "success", text: "تم تسجيل القيد في دفتر الحسابات بنجاح!" });
+      setEntryParty("");
+      setEntryAmount("");
+      // تحديث البيانات
+      await Promise.all([fetchSummary(), fetchLedger(selectedParty || undefined)]);
+      setTimeout(() => { setEntryOpen(false); setEntryMsg(null); }, 1500);
+    } catch (err: any) {
+      setEntryMsg({ type: "error", text: err.message || "حدث خطأ أثناء تسجيل القيد" });
+    } finally {
+      setEntrySubmitting(false);
+    }
+  };
+
   // Compute aggregate stats from summary
   const totalReceivables = Array.isArray(summary)
     ? summary.reduce((sum: number, s: any) => sum + Math.max(0, Number(s.running_balance || 0)), 0)
@@ -78,7 +115,76 @@ export default function FinancePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">المالية — دفتر الحسابات</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">المالية — دفتر الحسابات</h1>
+        <Dialog open={entryOpen} onOpenChange={setEntryOpen}>
+          <DialogTrigger asChild>
+            <Button className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              <span>إضافة قيد يدوي</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>إضافة قيد حسابي يدوي</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleManualEntry} className="space-y-4 pt-2">
+              <div className="grid gap-2">
+                <Label htmlFor="entry-party">اسم العميل / الطرف</Label>
+                <Input
+                  id="entry-party"
+                  placeholder="مثال: أحمد محمد أو 201001234567"
+                  value={entryParty}
+                  onChange={(e) => setEntryParty(e.target.value)}
+                  required
+                  disabled={entrySubmitting}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="entry-type">نوع القيد</Label>
+                  <Select value={entryType} onValueChange={(v) => setEntryType(v as any)} disabled={entrySubmitting}>
+                    <SelectTrigger id="entry-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DEBIT">مدين (DEBIT)</SelectItem>
+                      <SelectItem value="CREDIT">دائن (CREDIT)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="entry-amount">المبلغ (ج.م)</Label>
+                  <Input
+                    id="entry-amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={entryAmount}
+                    onChange={(e) => setEntryAmount(e.target.value)}
+                    required
+                    disabled={entrySubmitting}
+                  />
+                </div>
+              </div>
+              {entryMsg && (
+                <div className={`p-3 rounded-md text-sm ${entryMsg.type === "success" ? "bg-emerald-500/10 text-emerald-600" : "bg-destructive/10 text-destructive"}`}>
+                  {entryMsg.text}
+                </div>
+              )}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEntryOpen(false)} disabled={entrySubmitting}>
+                  إلغاء
+                </Button>
+                <Button type="submit" disabled={entrySubmitting || !entryParty || !entryAmount}>
+                  {entrySubmitting ? "جارٍ التسجيل..." : "تسجيل القيد"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-3">

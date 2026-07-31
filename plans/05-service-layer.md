@@ -122,3 +122,4 @@ apps/backend/src/services/
 - [ ] `SettlementService` بيعتمد على `LedgerEntry` كمصدر حقيقة، والـ Summary مجرد cache معاد حسابه.
 - [ ] كل عملية متعددة الخطوات ملفوفة في `$transaction`.
 - [ ] `quantity_ordered` بيتحقق إنه `> 0` قبل أي معالجة.
+kt

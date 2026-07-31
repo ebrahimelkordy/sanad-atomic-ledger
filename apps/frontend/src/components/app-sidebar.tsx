@@ -11,6 +11,9 @@ import {
   Package,
   Settings,
   LogOut,
+  Users,
+  Users2,
+  MessageSquareCode,
 } from "lucide-react";
 
 import {
@@ -29,14 +32,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 const mainItems = [
-  { title: "التينانت", url: "/tenants", icon: LayoutDashboard },
-  { title: "الأوردرات", url: "/orders", icon: ShoppingCart, badge: "٨" },
+  { title: "الرئيسية", url: "/dashboard", icon: LayoutDashboard },
+  { title: "المساعد الذكي", url: "/chat", icon: MessageSquareCode, badge: "جديد" },
+  { title: "المبيعات والذمم", url: "/sales", icon: ShoppingCart },
+  { title: "العملاء", url: "/customers", icon: Users2 },
+  { title: "الأوردرات", url: "/orders", icon: ShoppingCart },
+  { title: "المخزن", url: "/inventory", icon: Package },
+  { title: "الموظفين والعمال", url: "/employees", icon: Users },
   { title: "دفتر الحسابات", url: "/finance", icon: BookLock },
   {
     title: "تسويات بانتظارك",
     url: "/finance",
     icon: ShieldCheck,
-    badge: "٣",
     urgent: true,
   },
 ];
@@ -105,9 +112,11 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="الإعدادات">
-              <Settings className="h-4 w-4" />
-              {!collapsed && <span>الإعدادات</span>}
+            <SidebarMenuButton asChild tooltip="الإعدادات">
+              <Link href="/settings">
+                <Settings className="h-4 w-4" />
+                {!collapsed && <span>الإعدادات</span>}
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

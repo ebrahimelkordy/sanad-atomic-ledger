@@ -1,0 +1,10 @@
+﻿{
+    "bull:incoming-messages:meta":  [
+                                        "opts.maxLenEvents",
+                                        "10000"
+                                    ],
+    "bull:outgoing-messages:meta":  [
+                                        "opts.maxLenEvents",
+                                        "10000"
+                                    ]
+}

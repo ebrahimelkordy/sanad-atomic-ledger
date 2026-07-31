@@ -17,7 +17,7 @@ describe('App — E2E Integration Tests', () => {
             () => ({
               JWT_SECRET: 'test-secret-key-for-e2e',
               DATABASE_URL: 'postgresql://localhost:5432/cipher_test',
-              REDIS_HOST: 'localhost',
+              REDIS_HOST: 'https://one-glider-78116.upstash.io',
               REDIS_PORT: 6379,
               AI_PROVIDER: 'local',
               GEMINI_API_KEY: '',

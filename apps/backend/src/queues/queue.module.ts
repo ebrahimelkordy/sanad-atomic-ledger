@@ -27,13 +27,15 @@ import { IncomingMessageProcessor } from './incoming-message.processor';
           };
         }
 
-        // Redis محلي (docker-compose)
+// Redis محلي (docker-compose) — استخدام port 6380 عشان Redis 8.8.0 الجديد
         const host = config.get<string>('REDIS_HOST', 'localhost');
-        const port = config.get<number>('REDIS_PORT', 6379);
+        const port = config.get<number>('REDIS_PORT', 6380);
         return {
           connection: {
             host,
             port,
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
           },
         };
       },

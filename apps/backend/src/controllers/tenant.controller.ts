@@ -33,4 +33,14 @@ export class TenantController {
     const tenantId = req.user.tenant_id;
     return this.tenantQuery.getWhatsappNumbers(tenantId);
   }
+
+  @Post('whatsapp-numbers/pair-code')
+  async getPairCode(
+    @Body('whatsapp_number') whatsapp_number: string,
+  ) {
+    // محاكاة أو توليد كود الاقتران
+    const cleanNumber = (whatsapp_number || '').replace(/[^0-9]/g, '');
+    const dummyCode = `${cleanNumber.slice(-4)}-${Math.floor(1000 + Math.random() * 9000)}`;
+    return { pairing_code: dummyCode, message: 'استخدم هذا الكود في تطبيق الواتساب للربط' };
+  }
 }

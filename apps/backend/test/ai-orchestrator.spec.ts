@@ -1,4 +1,4 @@
-import { AIOrchestrationService } from '../src/services/ai-orchestration.service';
+﻿import { AIOrchestrationService } from '../src/services/ai-orchestration.service';
 import { AIProviderFactory } from '../src/ai-orchestrator/ai-provider.factory';
 import { AIProvider, ClassifyAndExtractResult, TenantAIContext } from '../src/ai-orchestrator/ai-provider.interface';
 import { ConfigService } from '@nestjs/config';
@@ -18,9 +18,11 @@ describe('AIOrchestrationService', () => {
   beforeEach(() => {
     mockPrimaryProvider = {
       classifyAndExtract: jest.fn(),
+      processChat: jest.fn(),
     };
     mockFallbackProvider = {
       classifyAndExtract: jest.fn(),
+      processChat: jest.fn(),
     };
 
     configService = {
@@ -29,11 +31,12 @@ describe('AIOrchestrationService', () => {
     } as any;
 
     // Create factory with mocks
-    const geminiProvider = { classifyAndExtract: jest.fn() } as any;
-    const openaiProvider = { classifyAndExtract: jest.fn() } as any;
-    const localProvider = mockPrimaryProvider;
+    const geminiProvider = { classifyAndExtract: jest.fn(), processChat: jest.fn() } as any;
+    const openaiProvider = { classifyAndExtract: jest.fn(), processChat: jest.fn() } as any;
+    const groqProvider = { classifyAndExtract: jest.fn(), processChat: jest.fn() } as any;
+    const localProvider = mockPrimaryProvider as any;
 
-    factory = new AIProviderFactory(configService as any, geminiProvider, openaiProvider, localProvider);
+    factory = new AIProviderFactory(configService as any, geminiProvider, openaiProvider, localProvider, groqProvider);
     jest.spyOn(factory, 'getAIProvider').mockReturnValue(mockPrimaryProvider);
 
     service = new AIOrchestrationService(factory);
@@ -43,12 +46,12 @@ describe('AIOrchestrationService', () => {
     const orderResult: ClassifyAndExtractResult = {
       intent: 'ORDER',
       extractedData: {
-        items: [{ productNameOrSku: 'بيتزا', quantity: 2 }],
+        items: [{ productNameOrSku: 'Ø¨ÙŠØªØ²Ø§', quantity: 2 }],
       },
     };
     mockPrimaryProvider.classifyAndExtract.mockResolvedValue(orderResult);
 
-    const result = await service.classifyAndExtract('طلب 2 بيتزا', tenantContext);
+    const result = await service.classifyAndExtract('Ø·Ù„Ø¨ 2 Ø¨ÙŠØªØ²Ø§', tenantContext);
     expect(result.intent).toBe('ORDER');
     expect((result.extractedData.items as any[])).toHaveLength(1);
   });
@@ -64,7 +67,7 @@ describe('AIOrchestrationService', () => {
     };
     mockPrimaryProvider.classifyAndExtract.mockResolvedValue(settlementResult);
 
-    const result = await service.classifyAndExtract('سداد 500 على 201000000001', tenantContext);
+    const result = await service.classifyAndExtract('Ø³Ø¯Ø§Ø¯ 500 Ø¹Ù„Ù‰ 201000000001', tenantContext);
     expect(result.intent).toBe('SETTLEMENT');
     expect(result.extractedData.amount).toBe(500);
   });
@@ -75,7 +78,7 @@ describe('AIOrchestrationService', () => {
       extractedData: {},
     });
 
-    const result = await service.classifyAndExtract('صباح الخير', tenantContext);
+    const result = await service.classifyAndExtract('ØµØ¨Ø§Ø­ Ø§Ù„Ø®ÙŠØ±', tenantContext);
     expect(result.intent).toBe('UNKNOWN');
   });
 
@@ -90,10 +93,10 @@ describe('AIOrchestrationService', () => {
 
     mockFallbackProvider.classifyAndExtract.mockResolvedValue({
       intent: 'ORDER',
-      extractedData: { items: [{ productNameOrSku: 'برجر', quantity: 1 }] },
+      extractedData: { items: [{ productNameOrSku: 'Ø¨Ø±Ø¬Ø±', quantity: 1 }] },
     });
 
-    const result = await service.classifyAndExtract('طلب 1 برجر', tenantContext);
+    const result = await service.classifyAndExtract('Ø·Ù„Ø¨ 1 Ø¨Ø±Ø¬Ø±', tenantContext);
     expect(result.intent).toBe('ORDER');
     expect(mockFallbackProvider.classifyAndExtract).toHaveBeenCalled();
   });
@@ -107,11 +110,13 @@ describe('AIProvider implementations contract', () => {
   });
 
   it('OpenAIProvider implements AIProvider interface', () => {
-    // Skip actual OpenAI instantiation — mock partial
-    const mockProvider: AIProvider = {
+    // Skip actual OpenAI instantiation â€” mock partial
+const mockProvider: AIProvider = {
       classifyAndExtract: jest.fn().mockResolvedValue({ intent: 'UNKNOWN', extractedData: {} }),
+      processChat: jest.fn().mockResolvedValue({ intent: 'UNKNOWN', extractedData: {}, reply: '', requiresConfirmation: false }),
     };
     expect(typeof mockProvider.classifyAndExtract).toBe('function');
+    expect(typeof mockProvider.processChat).toBe('function');
     
     // Verify the interface contract is satisfied
     const resultPromise = mockProvider.classifyAndExtract('test', { tenantId: '1', verticalType: 'RESTAURANT' });

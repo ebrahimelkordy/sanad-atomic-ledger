@@ -4,6 +4,7 @@ import {
   AIProvider,
   ClassifyAndExtractResult,
   TenantAIContext,
+  ProcessChatResult,
 } from './ai-provider.interface';
 
 @Injectable()
@@ -41,73 +42,32 @@ Return ONLY a JSON object with the following schema:
 
 Message: "${messageText}"`;
 
-    try {
-      const response = await fetch(this.endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: this.config.get<string>('LOCAL_MODEL_NAME') || 'llama3',
-          prompt,
-          format: 'json',
-          stream: false,
-        }),
-      });
+    const response = await fetch(this.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: this.config.get<string>('LOCAL_MODEL_NAME') || 'llama3',
+        prompt,
+        format: 'json',
+        stream: false,
+      }),
+    });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = (await response.json()) as { response: string };
-      const parsed = JSON.parse(data.response) as ClassifyAndExtractResult;
-      return parsed;
-    } catch (error) {
-      this.logger.error(
-        'Failed to classify message using Local Model, falling back to heuristics',
-        error,
-      );
-      return this.heuristicFallback(messageText);
+    if (!response.ok) {
+      throw new Error(`Local model HTTP error! status: ${response.status}`);
     }
+
+    const data = (await response.json()) as { response: string };
+    const parsed = JSON.parse(data.response) as ClassifyAndExtractResult;
+    return parsed;
   }
 
-  private heuristicFallback(messageText: string): ClassifyAndExtractResult {
-    const text = messageText.trim();
-    const lower = text.toLowerCase();
-
-    const settlementHint =
-      lower.includes('debit') ||
-      lower.includes('credit') ||
-      text.includes('مدين') ||
-      text.includes('دائن') ||
-      text.includes('تسوية') ||
-      text.includes('سداد');
-
-    if (settlementHint) {
-      return {
-        intent: 'SETTLEMENT',
-        extractedData: {
-          partyIdentifier: '',
-          entryType: 'CREDIT',
-          amount: 0,
-        },
-      };
-    }
-
-    const orderHint =
-      lower.includes('طلب') ||
-      lower.includes('اوردر') ||
-      lower.includes('order') ||
-      lower.includes('عايز') ||
-      lower.includes('أريد');
-
-    if (orderHint) {
-      return {
-        intent: 'ORDER',
-        extractedData: {
-          items: [] as Array<{ productNameOrSku: string; quantity: number }>,
-        },
-      };
-    }
-
-    return { intent: 'UNKNOWN', extractedData: {} };
+  async processChat(
+    messageText: string,
+    _tenantContext: TenantAIContext,
+    _attachments?: Array<{ mimeType: string; base64Data: string }>,
+  ): Promise<ProcessChatResult> {
+    // Local model doesn't support advanced chat yet — throw to trigger fallback
+    throw new Error('Local model does not support processChat');
   }
 }

@@ -8,6 +8,9 @@ import { OrderDetailRepository } from './order-detail.repository';
 import { LedgerEntryRepository } from './ledger-entry.repository';
 import { FinancialLedgerSummaryRepository } from './financial-ledger-summary.repository';
 import { PendingSettlementRepository } from './pending-settlement.repository';
+import { SaleRepository } from './sale.repository';
+import { EmployeeRepository } from './employee.repository';
+import { CustomerRepository } from './customer.repository';
 import { TransactionRunner } from './transaction-runner.service';
 
 const repositories = [
@@ -21,6 +24,9 @@ const repositories = [
   LedgerEntryRepository,
   FinancialLedgerSummaryRepository,
   PendingSettlementRepository,
+  SaleRepository,
+  EmployeeRepository,
+  CustomerRepository,
 ];
 
 @Global()

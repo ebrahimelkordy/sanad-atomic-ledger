@@ -128,5 +128,6 @@ export default function RegisterPage() {
           </CardContent>
         </Card>
       </div>
-      );
+    </div>
+  );
 }

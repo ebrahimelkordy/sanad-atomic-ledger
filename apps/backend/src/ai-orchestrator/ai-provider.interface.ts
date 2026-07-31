@@ -10,6 +10,13 @@ export type ClassifyAndExtractResult = {
   extractedData: Record<string, unknown>;
 };
 
+export type ProcessChatResult = {
+  intent: string;
+  extractedData: Record<string, unknown>;
+  reply: string;
+  requiresConfirmation: boolean;
+};
+
 /**
  * Only implementors allowed to talk to model SDKs (step 08).
  * Callers must go through `AIOrchestrationService.classifyAndExtract`.
@@ -19,4 +26,10 @@ export interface AIProvider {
     messageText: string,
     tenantContext: TenantAIContext,
   ): Promise<ClassifyAndExtractResult>;
+
+  processChat(
+    messageText: string,
+    tenantContext: TenantAIContext,
+    attachments?: Array<{ mimeType: string; base64Data: string }>,
+  ): Promise<ProcessChatResult>;
 }
