@@ -18,10 +18,11 @@ export class EmployeeService {
   }
 
   async createEmployee(tenantId: string, dto: Omit<CreateEmployeeInput, 'tenant_id'>) {
-    return this.employeeRepository.createEmployee({
+    const { employee, created } = await this.employeeRepository.createEmployee({
       tenant_id: tenantId,
       ...dto,
     });
+    return { employee, created };
   }
 
   async recordAttendance(

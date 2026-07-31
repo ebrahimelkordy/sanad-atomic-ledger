@@ -4,9 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import {
-  LayoutDashboard,
-  ShoppingCart,
-  BookLock,
   ShieldCheck,
   Bell,
   LogOut,
@@ -17,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -31,34 +29,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-
-export interface NavItem {
-  title: string;
-  url: string;
-  icon: React.ComponentType<{ className?: string }>;
-  badge?: string;
-  urgent?: boolean;
-}
-
-const defaultNavItems: NavItem[] = [
-  { title: "التينانت", url: "/tenants", icon: LayoutDashboard },
-  { title: "الأوردرات", url: "/orders", icon: ShoppingCart, badge: "٨" },
-  { title: "دفتر الحسابات", url: "/finance", icon: BookLock },
-  {
-    title: "تسويات بانتظارك",
-    url: "/finance",
-    icon: ShieldCheck,
-    badge: "٣",
-    urgent: true,
-  },
-];
+import { navItems, mobileItems, type NavItem } from "@/lib/navigation";
 
 interface NavbarProps {
   items?: NavItem[];
   showSidebarToggle?: boolean;
 }
 
-export function Navbar({ items = defaultNavItems, showSidebarToggle = true }: NavbarProps) {
+export function Navbar({ items = navItems, showSidebarToggle = true }: NavbarProps) {
   const currentPath = usePathname();
   const { logout, user } = useAuth();
   const router = useRouter();
@@ -96,21 +74,19 @@ export function Navbar({ items = defaultNavItems, showSidebarToggle = true }: Na
               <Link
                 key={item.title}
                 href={item.url}
-                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground ${
-                  active
-                    ? "bg-accent/80 text-accent-foreground font-semibold"
-                    : "text-muted-foreground"
-                }`}
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground ${active
+                  ? "bg-accent/80 text-accent-foreground font-semibold"
+                  : "text-muted-foreground"
+                  }`}
               >
                 <Icon className="h-4 w-4" />
                 <span>{item.title}</span>
                 {item.badge && (
                   <Badge
-                    className={`h-4 min-w-4 justify-center px-1 text-[10px] ${
-                      item.urgent
-                        ? "bg-destructive text-destructive-foreground"
-                        : "bg-primary text-primary-foreground"
-                    }`}
+                    className={`h-4 min-w-4 justify-center px-1 text-[10px] ${item.urgent
+                      ? "bg-destructive text-destructive-foreground"
+                      : "bg-primary text-primary-foreground"
+                      }`}
                   >
                     {item.badge}
                   </Badge>
@@ -175,37 +151,36 @@ export function Navbar({ items = defaultNavItems, showSidebarToggle = true }: Na
               </SheetTitle>
             </SheetHeader>
             <div className="flex flex-col gap-1 p-4">
-              {items.map((item) => {
+              {mobileItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.url);
                 return (
-                  <Link
-                    key={item.title}
-                    href={item.url}
-                    className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                      active
+                  <SheetClose asChild key={item.title}>
+                    <Link
+                      href={item.url}
+                      className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${active
                         ? "bg-primary text-primary-foreground"
                         : "hover:bg-accent text-foreground/80 hover:text-foreground"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </div>
-                    {item.badge && (
-                      <Badge
-                        className={`h-5 min-w-5 justify-center px-1.5 text-[10px] ${
-                          item.urgent
+                        }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </div>
+                      {item.badge && (
+                        <Badge
+                          className={`h-5 min-w-5 justify-center px-1.5 text-[10px] ${item.urgent
                             ? "bg-destructive text-destructive-foreground"
                             : active
-                            ? "bg-background text-foreground"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {item.badge}
-                      </Badge>
-                    )}
-                  </Link>
+                              ? "bg-background text-foreground"
+                              : "bg-muted text-muted-foreground"
+                            }`}
+                        >
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </Link>
+                  </SheetClose>
                 );
               })}
 

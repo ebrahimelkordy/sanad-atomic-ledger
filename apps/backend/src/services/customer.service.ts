@@ -56,9 +56,10 @@ export class CustomerService {
   }
 
   async createCustomer(tenantId: string, dto: Omit<CreateCustomerInput, 'tenant_id'>) {
-    return this.customerRepository.createCustomer({
+    const { customer, created } = await this.customerRepository.createCustomer({
       tenant_id: tenantId,
       ...dto,
     });
+    return { customer, created };
   }
 }

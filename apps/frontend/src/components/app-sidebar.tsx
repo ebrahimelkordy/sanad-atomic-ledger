@@ -4,16 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import {
-  LayoutDashboard,
-  ShoppingCart,
-  BookLock,
-  ShieldCheck,
-  Package,
   Settings,
   LogOut,
-  Users,
-  Users2,
-  MessageSquareCode,
+  ShieldCheck,
 } from "lucide-react";
 
 import {
@@ -30,23 +23,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-
-const mainItems = [
-  { title: "الرئيسية", url: "/dashboard", icon: LayoutDashboard },
-  { title: "المساعد الذكي", url: "/chat", icon: MessageSquareCode, badge: "جديد" },
-  { title: "المبيعات والذمم", url: "/sales", icon: ShoppingCart },
-  { title: "العملاء", url: "/customers", icon: Users2 },
-  { title: "الأوردرات", url: "/orders", icon: ShoppingCart },
-  { title: "المخزن", url: "/inventory", icon: Package },
-  { title: "الموظفين والعمال", url: "/employees", icon: Users },
-  { title: "دفتر الحسابات", url: "/finance", icon: BookLock },
-  {
-    title: "تسويات بانتظارك",
-    url: "/finance",
-    icon: ShieldCheck,
-    urgent: true,
-  },
-];
+import { mainItems } from "@/lib/navigation";
 
 export function AppSidebar() {
   const { state } = useSidebar();

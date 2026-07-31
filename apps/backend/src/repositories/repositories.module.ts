@@ -11,6 +11,7 @@ import { PendingSettlementRepository } from './pending-settlement.repository';
 import { SaleRepository } from './sale.repository';
 import { EmployeeRepository } from './employee.repository';
 import { CustomerRepository } from './customer.repository';
+import { FieldWorkerRepository } from './field-worker.repository';
 import { TransactionRunner } from './transaction-runner.service';
 
 const repositories = [
@@ -27,6 +28,7 @@ const repositories = [
   SaleRepository,
   EmployeeRepository,
   CustomerRepository,
+  FieldWorkerRepository,
 ];
 
 @Global()

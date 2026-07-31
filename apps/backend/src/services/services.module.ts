@@ -11,6 +11,7 @@ import { SalesService } from './sales.service';
 import { EmployeeService } from './employee.service';
 import { CustomerService } from './customer.service';
 import { ChatService } from './chat.service';
+import { InventoryOperationsService } from './inventory-operations.service';
 import { AiOrchestratorModule } from '../ai-orchestrator/ai-orchestrator.module';
 
 @Global()
@@ -28,6 +29,7 @@ import { AiOrchestratorModule } from '../ai-orchestrator/ai-orchestrator.module'
     SalesService,
     EmployeeService,
     CustomerService,
+    InventoryOperationsService,
     ChatService,
   ],
   exports: [
@@ -42,6 +44,7 @@ import { AiOrchestratorModule } from '../ai-orchestrator/ai-orchestrator.module'
     SalesService,
     EmployeeService,
     CustomerService,
+    InventoryOperationsService,
     ChatService,
     AiOrchestratorModule,
   ],
