@@ -1,0 +1,174 @@
+{
+  "generatedAt": "2026-08-05T20:29:10.142Z",
+  "model": "llama-3.3-70b-versatile",
+  "averages": {
+    "avgLatencyMs": 1700,
+    "avgActionsCount": 7.4
+  },
+  "passFail": {
+    "scenariosAboveLatencyThreshold": 0,
+    "inventoryFail": 3,
+    "inventoryPartial": 0,
+    "totalMissingIntents": 26,
+    "totalDomainErrors": 3
+  },
+  "results": [
+    {
+      "scenarioId": "AUTO_MECHANIC",
+      "scenarioName": "ورشة ميكانيكا سيارات",
+      "latencyMs": 4637,
+      "intent": "MULTI_ACTION",
+      "requiresConfirmation": true,
+      "actionsCount": 16,
+      "actionsBreakdown": {
+        "ADD_EMPLOYEE": 2,
+        "EMPLOYEE_ATTENDANCE": 1,
+        "EMPLOYEE_ADVANCE": 1,
+        "ADD_INVENTORY": 3,
+        "INVENTORY_WITHDRAWAL": 2,
+        "RETURN_TO_INVENTORY": 1,
+        "SERVICE_ORDER": 1,
+        "EXPENSE": 3,
+        "SETTLEMENT": 2
+      },
+      "replyLength": 60,
+      "hasParseError": false,
+      "hasMissingExpectedIntents": [
+        "ADD_CUSTOMER"
+      ],
+      "hasInventoryQuantities": "ALL_OK",
+      "itemsPerWithdrawalAvg": 1.5,
+      "uniquePhoneCustomers": false,
+      "hasDomainViolation": []
+    },
+    {
+      "scenarioId": "PHARMACY",
+      "scenarioName": "صيدلية النور",
+      "latencyMs": 3861,
+      "intent": "MULTI_ACTION",
+      "requiresConfirmation": true,
+      "actionsCount": 21,
+      "actionsBreakdown": {
+        "ADD_EMPLOYEE": 3,
+        "EMPLOYEE_ATTENDANCE": 1,
+        "ADD_INVENTORY": 3,
+        "EXPENSE": 2,
+        "ADD_CUSTOMER": 4,
+        "INVENTORY_WITHDRAWAL": 2,
+        "SETTLEMENT": 5,
+        "EMPLOYEE_ADVANCE": 1
+      },
+      "replyLength": 54,
+      "hasParseError": false,
+      "hasMissingExpectedIntents": [],
+      "hasInventoryQuantities": "ALL_OK",
+      "itemsPerWithdrawalAvg": 2,
+      "uniquePhoneCustomers": true,
+      "hasDomainViolation": []
+    },
+    {
+      "scenarioId": "RESTAURANT",
+      "scenarioName": "مطعم لؤلؤة مصر",
+      "latencyMs": -1,
+      "intent": "ERROR",
+      "requiresConfirmation": false,
+      "actionsCount": 0,
+      "actionsBreakdown": {},
+      "replyLength": 0,
+      "hasParseError": true,
+      "hasMissingExpectedIntents": [
+        "ADD_EMPLOYEE",
+        "ADD_CUSTOMER",
+        "ADD_INVENTORY",
+        "EMPLOYEE_ATTENDANCE",
+        "INVENTORY_WITHDRAWAL",
+        "EMPLOYEE_ADVANCE",
+        "SETTLEMENT",
+        "EXPENSE"
+      ],
+      "hasInventoryQuantities": "FAIL",
+      "itemsPerWithdrawalAvg": 0,
+      "uniquePhoneCustomers": false,
+      "hasDomainViolation": [
+        "FATAL: 429 Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kyw4qrfme1w8g1fpsenkqtfd` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 96580, Requested 6631. Please try again in 46m14.304s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing"
+      ]
+    },
+    {
+      "scenarioId": "CONSTRUCTION",
+      "scenarioName": "شركة مواد بناء",
+      "latencyMs": -1,
+      "intent": "ERROR",
+      "requiresConfirmation": false,
+      "actionsCount": 0,
+      "actionsBreakdown": {},
+      "replyLength": 0,
+      "hasParseError": true,
+      "hasMissingExpectedIntents": [
+        "ADD_EMPLOYEE",
+        "ADD_CUSTOMER",
+        "ADD_INVENTORY",
+        "EMPLOYEE_ATTENDANCE",
+        "INVENTORY_WITHDRAWAL",
+        "SETTLEMENT",
+        "EXPENSE",
+        "RETURN_TO_INVENTORY"
+      ],
+      "hasInventoryQuantities": "FAIL",
+      "itemsPerWithdrawalAvg": 0,
+      "uniquePhoneCustomers": false,
+      "hasDomainViolation": [
+        "FATAL: 429 Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kyw4qrfme1w8g1fpsenkqtfd` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 96579, Requested 6665. Please try again in 46m42.816s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing"
+      ]
+    },
+    {
+      "scenarioId": "ELECTRONICS_REPAIR",
+      "scenarioName": "إلكترونيات + مركز صيانة",
+      "latencyMs": -1,
+      "intent": "ERROR",
+      "requiresConfirmation": false,
+      "actionsCount": 0,
+      "actionsBreakdown": {},
+      "replyLength": 0,
+      "hasParseError": true,
+      "hasMissingExpectedIntents": [
+        "ADD_EMPLOYEE",
+        "ADD_CUSTOMER",
+        "ADD_INVENTORY",
+        "EMPLOYEE_ATTENDANCE",
+        "INVENTORY_WITHDRAWAL",
+        "SETTLEMENT",
+        "EXPENSE",
+        "RETURN_TO_INVENTORY",
+        "SERVICE_ORDER"
+      ],
+      "hasInventoryQuantities": "FAIL",
+      "itemsPerWithdrawalAvg": 0,
+      "uniquePhoneCustomers": false,
+      "hasDomainViolation": [
+        "FATAL: 429 Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kyw4qrfme1w8g1fpsenkqtfd` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 96578, Requested 6924. Please try again in 50m25.728s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing"
+      ]
+    }
+  ],
+  "recommendations": [
+    {
+      "نقطة": "فشل حساب كميات المخزون Deterministic من الكراتين",
+      "التفاصيل": "3 سيناريوهات فشلت تماماً في استخراج الكميات من \"كراتين × قطع في الكرتونة\" ووضعت كميات صفرية أو افتراضية.",
+      "المقترح": "إضافة Regex Pre-processor قبل ما نرسل للـ AI لاستخراج الكميات والأسعار من جمل مثل \"N كراتين × QTY القطع × COST الكرتونة\" وحقنها في الـ prompt كـ JSON Pre-computed."
+    },
+    {
+      "نقطة": "نقص في استخراج نطاق كامل من الـ Expected Intents",
+      "التفاصيل": "نقص مجموع 26 من الـ intents المتوقعة. مشهور: RETURN_TO_INVENTORY, SERVICE_ORDER, EXPENSE الهالك.",
+      "المقترح": "إضافة نماذج Few-shot داخل الـ system prompt لكل صنف مشهور يغيب (خاصة الهالك والمرتجعات)."
+    },
+    {
+      "نقطة": "خلط بين أدوار الكيانات (Company as Employee)",
+      "التفاصيل": "اكتشفت 3 حالة إضافة \"شركة / مستشفى / مقاول\" كـ ADD_EMPLOYEE بدل ADD_CUSTOMER.",
+      "المقترح": "حقن Keywords list في قالب الـ prompt تشير أن أي اسم يبدأ بشركة / مستشفى / مؤسسة / فندق / مطعم يكون دائماً CUSTOMER ولا EMPLOYEE حتى لو جاء في جملة \"شركة كذا أخذ حاجة من المخزن\"."
+    },
+    {
+      "نقطة": "فشل تجميع المسحوبات المتعددة في items[]",
+      "التفاصيل": "في بعض السيناريوهات بعت أمر مسحوبة لـ 3+ أصناف، ولكن الـ AI فصلها لـ N من INVENTORY_WITHDRAWAL بدلاً من items[] متعددة.",
+      "المقترح": "تقوية قاعدة #5 في System prompt مع مثال One-shot: \"كريم أخذ فلتر×4+إطار×1\" → INVENTORY_WITHDRAWAL واحد items: [{SKU1 qty 4}, {SKU2 qty 1}]."
+    }
+  ]
+}

@@ -1,8 +1,9 @@
+import { AuthenticatedPrincipal } from '../domain/identity/principal';
 import { Request } from 'express';
 
 export interface AuthenticatedRequest extends Request {
-  user: {
-    tenant_id: string;
-    user_id?: string;
-  };
+  principal: AuthenticatedPrincipal;
+  traceId: string;
+  ip: string;
+  userAgent?: string;
 }

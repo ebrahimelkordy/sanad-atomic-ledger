@@ -40,9 +40,14 @@ export class CustomerService {
     );
 
     // جلب كشف الحساب من الـ Ledger
-    const ledger = await this.financeQueryService.getLedger(tenantId, customer.phone);
-    const summaryList = await this.financeQueryService.getSummary(tenantId, customer.phone);
-    const summary = summaryList[0] || {};
+    const ledgerByPhone = await this.financeQueryService.getLedger(tenantId, customer.phone);
+    const ledgerByName = customer.name !== customer.phone ? await this.financeQueryService.getLedger(tenantId, customer.name) : [];
+    const ledger = [...ledgerByPhone, ...ledgerByName];
+
+    const allSummaries = await this.financeQueryService.getSummary(tenantId);
+    const summary = allSummaries.find(
+      (s: any) => s.party_identifier === customer.phone || s.party_identifier === customer.name,
+    ) || {};
     const balance = Number(summary.running_balance || 0);
 
     return {

@@ -54,6 +54,35 @@ export class EmployeeService {
     });
   }
 
+  async updateRateWithHistory(
+    tenantId: string,
+    id: string,
+    dto: {
+      new_rate: number;
+      change_reason: any;
+      salary_type?: any;
+      notes?: string;
+      effective_date?: string;
+      applied_by?: string;
+    },
+  ) {
+    await this.getEmployeeById(tenantId, id);
+    return this.employeeRepository.updateRateWithHistory({
+      employeeId: id,
+      newRate: dto.new_rate,
+      changeReason: dto.change_reason,
+      salaryType: dto.salary_type,
+      notes: dto.notes,
+      effectiveDate: dto.effective_date ? new Date(dto.effective_date) : undefined,
+      appliedBy: dto.applied_by,
+    });
+  }
+
+  async getRateHistory(tenantId: string, id: string) {
+    await this.getEmployeeById(tenantId, id);
+    return this.employeeRepository.getRateHistory(id);
+  }
+
   /**
    * حساب الحضور الذاتي والرواتب والسلفيات الصافية
    */

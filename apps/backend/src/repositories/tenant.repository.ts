@@ -39,4 +39,11 @@ export class TenantRepository {
       where: { business_name: name },
     });
   }
+
+  async closeFinancialPeriod(tenantId: string, closedUntil: Date): Promise<Tenant> {
+    return this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { closed_until_date: closedUntil },
+    });
+  }
 }

@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.env
+.env.local
+*.rdb
+dump-backup.rdb
+dump.rdb
+redis-backup-*.json
+memory
+plans
+.lean_ai
+lovable-project-*
+apps/frontend
+packages
+*.md
+!apps/backend/prisma

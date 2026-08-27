@@ -11,8 +11,13 @@ import { EmployeeController } from './employee.controller';
 import { CustomerController } from './customer.controller';
 import { ChatController } from './chat.controller';
 
+import { TerminusModule } from '@nestjs/terminus';
+import { HealthController } from './health.controller';
+
+import { WhatsappGatewayModule } from '../whatsapp-gateway/whatsapp-gateway.module';
+
 @Module({
-  imports: [AuthModule, ServicesModule],
+  imports: [AuthModule, ServicesModule, TerminusModule, WhatsappGatewayModule],
   controllers: [
     AuthController,
     TenantController,
@@ -23,6 +28,7 @@ import { ChatController } from './chat.controller';
     EmployeeController,
     CustomerController,
     ChatController,
+    HealthController,
   ],
 })
 export class ControllersModule {}

@@ -1,18 +1,22 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../repositories/prisma.service';
+import type { IIdentityRepository } from '../application/ports/i-identity.port';
+import { IIdentityRepository as IIdentityRepoToken } from '../application/ports/i-identity.port';
+import { AuthenticatedPrincipal } from '../domain/identity/principal';
 
 export interface JwtPayload {
-  sub: string;
+  sub: string;          // TenantUser.id
+  tenant_id: string;
 }
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly config: ConfigService,
-    private readonly prisma: PrismaService,
+    @Inject(IIdentityRepoToken)
+    private readonly identity: IIdentityRepository,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -21,15 +25,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<{ tenant_id: string }> {
-    const tenantId = payload.sub;
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { id: true },
-    });
-    if (!tenant) {
-      throw new UnauthorizedException('Tenant not found or invalid token');
+  async validate(payload: JwtPayload): Promise<AuthenticatedPrincipal> {
+    if (!payload || !payload.sub) {
+      throw new UnauthorizedException('Invalid token');
     }
-    return { tenant_id: tenant.id };
+    const principal = await this.identity.findPrincipalById(payload.sub);
+    if (!principal) {
+      throw new UnauthorizedException('Principal for token no longer exists');
+    }
+    if (principal.status === 'LOCKED') throw new UnauthorizedException('Account is locked');
+    if (principal.status === 'DISABLED') throw new UnauthorizedException('Account is disabled');
+    if (principal.tenantId !== payload.tenant_id) {
+      throw new UnauthorizedException('Token tenant mismatch');
+    }
+    return principal;
   }
 }

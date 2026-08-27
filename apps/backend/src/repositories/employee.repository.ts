@@ -9,7 +9,7 @@
  */
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
-import { Employee, AttendanceStatus, SalaryType, EmployeeTxType, Prisma } from '@prisma/client';
+import { Employee, AttendanceStatus, SalaryType, EmployeeTxType, RateChangeReason, Prisma } from '@prisma/client';
 import {
   OfficeEmployeeSchema,
   ValidatedOfficeEmployeePayload,
@@ -27,17 +27,6 @@ export class EmployeeRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private static normalize(input: CreateEmployeeInput) {
-    // القاعدة #2: منع استخدام الموظف الإداري لكيان يبدو عاملاً ميدانياً.
-    const inferred = classifyDomainRole({
-      name: input.name,
-      jobTitle: input.job_title,
-    });
-    if (inferred === 'FIELD_WORKER') {
-      throw new Error(
-        `VIOLATION_DOMAIN_SEPARATION: الكيان "${input.name}" يبدو عاملاً ميدانياً. استخدم FieldWorkerRepository بدلاً من EmployeeRepository.`,
-      );
-    }
-
     const validated = OfficeEmployeeSchema.parse(input);
 
     // القاعدة #1: هاتف آمن وليس null/false.
@@ -177,6 +166,70 @@ export class EmployeeRepository {
         amount: data.amount,
         notes: data.notes ?? null,
       },
+    });
+  }
+
+  async updateRateWithHistory(
+    data: {
+      employeeId: string;
+      newRate: number;
+      changeReason: RateChangeReason;
+      salaryType?: SalaryType;
+      notes?: string;
+      effectiveDate?: Date;
+      appliedBy?: string;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    const runInTx = async (prismaTx: Prisma.TransactionClient) => {
+      const employee = await prismaTx.employee.findUnique({
+        where: { id: data.employeeId },
+      });
+      if (!employee) {
+        throw new Error('الموظف غير موجود');
+      }
+
+      const oldRate = employee.base_rate;
+      const salaryType = data.salaryType || employee.salary_type;
+      const effectiveDate = data.effectiveDate || new Date();
+
+      // 1) تحديث الموظف بمعدله الجديد (غير رجعي)
+      const updatedEmployee = await prismaTx.employee.update({
+        where: { id: data.employeeId },
+        data: {
+          base_rate: data.newRate,
+          salary_type: salaryType,
+        },
+      });
+
+      // 2) تسجيل السجل التاريخي والتأكيدي
+      const historyRecord = await prismaTx.employeeRateHistory.create({
+        data: {
+          employee_id: data.employeeId,
+          old_rate: oldRate,
+          new_rate: data.newRate,
+          salary_type: salaryType,
+          change_reason: data.changeReason,
+          notes: data.notes || null,
+          effective_date: effectiveDate,
+          applied_by: data.appliedBy || null,
+        },
+      });
+
+      return { employee: updatedEmployee, historyRecord };
+    };
+
+    if (tx) {
+      return runInTx(tx);
+    }
+    return this.prisma.$transaction(runInTx);
+  }
+
+  async getRateHistory(employeeId: string, tx?: Prisma.TransactionClient) {
+    const client = tx ?? this.prisma;
+    return client.employeeRateHistory.findMany({
+      where: { employee_id: employeeId },
+      orderBy: { created_at: 'desc' },
     });
   }
 }

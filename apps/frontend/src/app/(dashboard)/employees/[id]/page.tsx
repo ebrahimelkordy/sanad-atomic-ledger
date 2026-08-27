@@ -40,6 +40,7 @@ export default function EmployeeProfilePage() {
   const router = useRouter();
   const [employee, setEmployee] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [rateHistory, setRateHistory] = useState<any[]>([]);
 
   // Attendance dialog
   const [attOpen, setAttOpen] = useState(false);
@@ -51,11 +52,33 @@ export default function EmployeeProfilePage() {
   const [txForm, setTxForm] = useState({ type: "ADVANCE" as any, amount: "", notes: "" });
   const [txSubmitting, setTxSubmitting] = useState(false);
 
+  // Rate Update dialog (غير رجعي)
+  const [rateOpen, setRateOpen] = useState(false);
+  const [rateForm, setRateForm] = useState({
+    new_rate: "",
+    change_reason: "PROMOTION" as any,
+    salary_type: "DAILY" as any,
+    notes: "",
+    effective_date: new Date().toISOString().slice(0, 10),
+  });
+  const [rateSubmitting, setRateSubmitting] = useState(false);
+
   const fetchEmployee = async () => {
     setLoading(true);
     try {
-      const data = await api.getEmployeeById(id);
-      setEmployee(data);
+      const [empData, historyData] = await Promise.all([
+        api.getEmployeeById(id),
+        api.getEmployeeRateHistory(id).catch(() => []),
+      ]);
+      setEmployee(empData);
+      setRateHistory(historyData || []);
+      if (empData) {
+        setRateForm((prev) => ({
+          ...prev,
+          new_rate: String(empData.base_rate || ""),
+          salary_type: empData.salary_type || "DAILY",
+        }));
+      }
     } finally {
       setLoading(false);
     }
@@ -94,6 +117,24 @@ export default function EmployeeProfilePage() {
       setTxOpen(false);
     } finally {
       setTxSubmitting(false);
+    }
+  };
+
+  const handleUpdateRate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRateSubmitting(true);
+    try {
+      await api.updateEmployeeRate(id, {
+        new_rate: parseFloat(rateForm.new_rate) || 0,
+        change_reason: rateForm.change_reason,
+        salary_type: rateForm.salary_type,
+        notes: rateForm.notes || undefined,
+        effective_date: rateForm.effective_date || undefined,
+      });
+      await fetchEmployee();
+      setRateOpen(false);
+    } finally {
+      setRateSubmitting(false);
     }
   };
 
@@ -140,6 +181,72 @@ export default function EmployeeProfilePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* تعديل الأجر / اليومية غير رجعي */}
+          <Dialog open={rateOpen} onOpenChange={setRateOpen}>
+            <DialogTrigger asChild>
+              <Button variant="default" className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                <TrendingUp className="h-4 w-4" />
+                تعديل المرتب / اليومية
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>تعديل المرتب / اليومية (بدون أثر رجعي)</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleUpdateRate} className="space-y-4 pt-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label>نوع الأجر</Label>
+                    <Select value={rateForm.salary_type} onValueChange={(v) => setRateForm({ ...rateForm, salary_type: v as any })} disabled={rateSubmitting}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="DAILY">يومية (باليوم)</SelectItem>
+                        <SelectItem value="MONTHLY">شهري (راتب ثابت)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>المعدل / الراتب الجديد (ج.م)</Label>
+                    <Input type="number" min="0" step="0.01" placeholder="0.00" value={rateForm.new_rate} onChange={(e) => setRateForm({ ...rateForm, new_rate: e.target.value })} required disabled={rateSubmitting} />
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>سبب التعديل / الزيادة</Label>
+                  <Select value={rateForm.change_reason} onValueChange={(v) => setRateForm({ ...rateForm, change_reason: v as any })} disabled={rateSubmitting}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PROMOTION">ترقية / ترفيع وظيفي</SelectItem>
+                      <SelectItem value="ANNUAL_RAISE">علاوة سنوية</SelectItem>
+                      <SelectItem value="MERIT_BONUS">مكافأة أداء وتميز</SelectItem>
+                      <SelectItem value="CORRECTION">تصحيح خطأ إداري</SelectItem>
+                      <SelectItem value="OTHER">أسباب أخرى</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>تاريخ بدء تطبيق الزيادة</Label>
+                  <Input type="date" value={rateForm.effective_date} onChange={(e) => setRateForm({ ...rateForm, effective_date: e.target.value })} required disabled={rateSubmitting} />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>ملاحظات إضافية</Label>
+                  <Input placeholder="مثال: بناءً على قرار مجلس الإدارة..." value={rateForm.notes} onChange={(e) => setRateForm({ ...rateForm, notes: e.target.value })} disabled={rateSubmitting} />
+                </div>
+
+                <div className="p-3 bg-muted/40 border rounded-lg text-xs text-muted-foreground">
+                  🔒 <b>ضمان الأثر غير الرجعي:</b> التعديل سيُطبق للأمام فقط من تاريخ الزيادة. المعاملات والرواتب السابقة تفضل محسوبة بالمعدل القديم دون أي تغيير.
+                </div>
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setRateOpen(false)} disabled={rateSubmitting}>إلغاء</Button>
+                  <Button type="submit" disabled={rateSubmitting || !rateForm.new_rate}>{rateSubmitting ? "جارٍ الحفظ..." : "تأكيد الزيادة"}</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
           {/* تسجيل استثناء حضور */}
           <Dialog open={attOpen} onOpenChange={setAttOpen}>
             <DialogTrigger asChild>
@@ -340,6 +447,70 @@ export default function EmployeeProfilePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* سجل التغييرات التاريخية غير الرجعية للمرتب واليوميات */}
+      <Card className="shadow-card border-emerald-500/20">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-emerald-600" />
+              سجل الترقية والزيادات التاريخية (غير رجعي)
+            </CardTitle>
+            <CardDescription>تتبع جميع التعديلات السابقة والزيادات والعلاوات مع أسبابها</CardDescription>
+          </div>
+          <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+            {rateHistory.length} تعديل مسجل
+          </Badge>
+        </CardHeader>
+        <CardContent className="p-0">
+          {rateHistory.length === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              لم يتم تسجيل أي زيادات أو تعديلات على راتب/يومية هذا الموظف بعد.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-right">التاريخ الفعلي</TableHead>
+                  <TableHead className="text-right">المعدل السابق</TableHead>
+                  <TableHead className="text-right">المعدل الجديد</TableHead>
+                  <TableHead className="text-right">الفرق / الزيادة</TableHead>
+                  <TableHead className="text-right">السبب</TableHead>
+                  <TableHead className="text-right">ملاحظات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rateHistory.map((item: any) => {
+                  const diff = Number(item.new_rate) - Number(item.old_rate);
+                  const reasonMap: Record<string, string> = {
+                    PROMOTION: "ترقية وظيفية",
+                    ANNUAL_RAISE: "علاوة سنوية",
+                    MERIT_BONUS: "مكافأة تميز",
+                    CORRECTION: "تصحيح إداري",
+                    OTHER: "أخرى",
+                  };
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="text-sm font-medium">
+                        {new Date(item.effective_date || item.created_at).toLocaleDateString("ar-EG")}
+                      </TableCell>
+                      <TableCell className="tabular text-muted-foreground">EGP {Number(item.old_rate).toFixed(2)}</TableCell>
+                      <TableCell className="tabular font-bold text-emerald-600">EGP {Number(item.new_rate).toFixed(2)}</TableCell>
+                      <TableCell className="tabular">
+                        <Badge variant={diff >= 0 ? "secondary" : "destructive"} className="text-xs">
+                          {diff >= 0 ? `+EGP ${diff.toFixed(2)}` : `-EGP ${Math.abs(diff).toFixed(2)}`}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">{reasonMap[item.change_reason] || item.change_reason}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{item.notes || "—"}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ملخص مالي */}
       <Card className="shadow-card">

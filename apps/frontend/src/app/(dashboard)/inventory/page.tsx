@@ -24,7 +24,17 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Package, Plus, AlertCircle, RefreshCw } from "lucide-react";
+import { Package, Plus, AlertCircle, RefreshCw, TrendingUp, History } from "lucide-react";
+
+function getStockBadge(stock: number) {
+  if (stock === 0) {
+    return <Badge variant="destructive">نفد المخزون (0)</Badge>;
+  }
+  if (stock < 10) {
+    return <Badge variant="outline" className="text-amber-600 border-amber-500/30 bg-amber-50/50">{stock} قطع (منخفض)</Badge>;
+  }
+  return <Badge variant="secondary" className="text-emerald-700 bg-emerald-50">{stock} قطعة</Badge>;
+}
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -36,6 +46,23 @@ export default function InventoryPage() {
   const [form, setForm] = useState({ sku: "", name: "", unit_price: "", cost_price: "", current_stock: "" });
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // نموذج تعديل السعر غير الرجعي
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [priceForm, setPriceForm] = useState({
+    new_unit_price: "",
+    new_cost_price: "",
+    change_reason: "SUPPLIER_INCREASE" as any,
+    notes: "",
+    effective_date: new Date().toISOString().slice(0, 10),
+  });
+  const [priceSubmitting, setPriceSubmitting] = useState(false);
+
+  // حوار عرض سجل تاريخ الأسعار
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [priceHistory, setPriceHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -77,10 +104,51 @@ export default function InventoryPage() {
     }
   };
 
-  const getStockBadge = (stock: number) => {
-    if (stock === 0) return <Badge variant="destructive">نفذ المخزون</Badge>;
-    if (stock < 10) return <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/40">{stock} متبقي</Badge>;
-    return <Badge variant="secondary" className="text-emerald-600">{stock}</Badge>;
+  const handleUpdatePrice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProduct) return;
+    setPriceSubmitting(true);
+    try {
+      await api.updateProductPrice(selectedProduct.id, {
+        new_unit_price: parseFloat(priceForm.new_unit_price) || undefined,
+        new_cost_price: parseFloat(priceForm.new_cost_price) || undefined,
+        change_reason: priceForm.change_reason,
+        notes: priceForm.notes || undefined,
+        effective_date: priceForm.effective_date || undefined,
+      });
+      await fetchProducts();
+      setPriceDialogOpen(false);
+    } catch (err: any) {
+      alert(err.message || "حدث خطأ أثناء تعديل السعر");
+    } finally {
+      setPriceSubmitting(false);
+    }
+  };
+
+  const openPriceModal = (product: any) => {
+    setSelectedProduct(product);
+    setPriceForm({
+      new_unit_price: String(product.unit_price || ""),
+      new_cost_price: String(product.cost_price || ""),
+      change_reason: "SUPPLIER_INCREASE",
+      notes: "",
+      effective_date: new Date().toISOString().slice(0, 10),
+    });
+    setPriceDialogOpen(true);
+  };
+
+  const openHistoryModal = async (product: any) => {
+    setSelectedProduct(product);
+    setHistoryLoading(true);
+    setHistoryDialogOpen(true);
+    try {
+      const data = await api.getProductPriceHistory(product.id);
+      setPriceHistory(data || []);
+    } catch (err) {
+      setPriceHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
   return (
@@ -260,6 +328,7 @@ export default function InventoryPage() {
                   <TableHead className="text-right">التكلفة</TableHead>
                   <TableHead className="text-right">الربح للقطعة</TableHead>
                   <TableHead className="text-right">الكمية</TableHead>
+                  <TableHead className="text-right">إجراءات الأسعار</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -279,6 +348,17 @@ export default function InventoryPage() {
                         EGP {profitPerUnit.toFixed(2)}
                       </TableCell>
                       <TableCell>{getStockBadge(product.current_stock)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => openPriceModal(product)}>
+                            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
+                            تعديل السعر
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openHistoryModal(product)} title="سجل تغييرات الأسعار">
+                            <History className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -287,6 +367,133 @@ export default function InventoryPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* حوار تعديل أسعار المنتج بصفة غير رجعية */}
+      <Dialog open={priceDialogOpen} onOpenChange={setPriceDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>تعديل سعر المنتج (بدون أثر رجعي)</DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <form onSubmit={handleUpdatePrice} className="space-y-4 pt-2">
+              <div className="text-sm font-medium border-b pb-2">
+                المنتج: <span className="text-primary">{selectedProduct.name}</span> ({selectedProduct.sku})
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <Label>سعر البيع الجديد (ج.م)</Label>
+                  <Input type="number" min="0" step="0.01" value={priceForm.new_unit_price} onChange={(e) => setPriceForm({ ...priceForm, new_unit_price: e.target.value })} required disabled={priceSubmitting} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>سعر التكلفة الجديد (ج.م)</Label>
+                  <Input type="number" min="0" step="0.01" value={priceForm.new_cost_price} onChange={(e) => setPriceForm({ ...priceForm, new_cost_price: e.target.value })} required disabled={priceSubmitting} />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>سبب تعديل السعر</Label>
+                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={priceForm.change_reason} onChange={(e) => setPriceForm({ ...priceForm, change_reason: e.target.value as any })} disabled={priceSubmitting}>
+                  <option value="SUPPLIER_INCREASE">زيادة سعر المورد / التكلفة</option>
+                  <option value="MARKET_REPRICE">إعادة تسعير سوقية جديدة</option>
+                  <option value="PERIODIC_REVIEW">مراجعة دورية للأرباح</option>
+                  <option value="CORRECTION">تصحيح خطأ تسعير سابق</option>
+                  <option value="OTHER">أسباب أخرى</option>
+                </select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>تاريخ بدء تطبيق السعر الجديد</Label>
+                <Input type="date" value={priceForm.effective_date} onChange={(e) => setPriceForm({ ...priceForm, effective_date: e.target.value })} required disabled={priceSubmitting} />
+              </div>
+
+              <div className="grid gap-2">
+                <Label>ملاحظات إضافية</Label>
+                <Input placeholder="مثال: زيادة الفاتورة من المورد بنسبة 10%..." value={priceForm.notes} onChange={(e) => setPriceForm({ ...priceForm, notes: e.target.value })} disabled={priceSubmitting} />
+              </div>
+
+              <div className="p-3 bg-muted/40 border rounded-lg text-xs text-muted-foreground">
+                🔒 <b>ضمان الأثر غير الرجعي:</b> جميع المبيعات والطلبيات السابقة ستظل محفوظة بأسعارها وقت البيع دون أي تغيير في الأرباح التاريخية.
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setPriceDialogOpen(false)} disabled={priceSubmitting}>إلغاء</Button>
+                <Button type="submit" disabled={priceSubmitting}>{priceSubmitting ? "جارٍ الحفظ..." : "حفظ السعر الجديد"}</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* حوار عرض سجل تاريخ التغييرات في أسعار المنتج */}
+      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              سجل التغييرات التاريخية لأسعار المنتج
+            </DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="space-y-4 pt-2">
+              <div className="text-sm font-medium border-b pb-2">
+                المنتج: <span className="text-primary">{selectedProduct.name}</span> ({selectedProduct.sku})
+              </div>
+
+              {historyLoading ? (
+                <div className="space-y-2 py-4">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
+              ) : priceHistory.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  لم يتم تسجيل أي تعديلات سابقة على أسعار هذا المنتج.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">التاريخ الفعلي</TableHead>
+                      <TableHead className="text-right">سعر البيع</TableHead>
+                      <TableHead className="text-right">سعر التكلفة</TableHead>
+                      <TableHead className="text-right">السبب</TableHead>
+                      <TableHead className="text-right">ملاحظات</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {priceHistory.map((h: any) => {
+                      const reasonMap: Record<string, string> = {
+                        SUPPLIER_INCREASE: "زيادة سعر المورد",
+                        MARKET_REPRICE: "تسعيرة سوقية جديدة",
+                        PERIODIC_REVIEW: "مراجعة دورية",
+                        CORRECTION: "تصحيح خطأ",
+                        OTHER: "أخرى",
+                      };
+                      return (
+                        <TableRow key={h.id}>
+                          <TableCell className="text-sm font-medium">
+                            {new Date(h.effective_date || h.created_at).toLocaleDateString("ar-EG")}
+                          </TableCell>
+                          <TableCell className="tabular">
+                            <span className="text-xs text-muted-foreground block">القديم: EGP {Number(h.old_unit_price).toFixed(2)}</span>
+                            <span className="font-bold text-emerald-600">EGP {Number(h.new_unit_price).toFixed(2)}</span>
+                          </TableCell>
+                          <TableCell className="tabular">
+                            <span className="text-xs text-muted-foreground block">القديم: EGP {Number(h.old_cost_price).toFixed(2)}</span>
+                            <span className="font-bold">EGP {Number(h.new_cost_price).toFixed(2)}</span>
+                          </TableCell>
+                          <TableCell className="text-sm">{reasonMap[h.change_reason] || h.change_reason}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{h.notes || "—"}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

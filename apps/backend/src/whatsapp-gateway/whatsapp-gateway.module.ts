@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BaileysSessionManagerService } from './baileys-session-manager.service';
 import { BaileysGatewayService } from './baileys-gateway.service';
 import { SessionRepositoryAdapter } from './session.repository-adapter';
+import { WhatsappBootstrapService } from './whatsapp-bootstrap.service';
 import { RepositoriesModule } from '../repositories/repositories.module';
 import { QueueModule } from '../queues/queue.module';
 
@@ -11,6 +12,7 @@ import { QueueModule } from '../queues/queue.module';
     BaileysSessionManagerService,
     BaileysGatewayService,
     SessionRepositoryAdapter,
+    WhatsappBootstrapService,
   ],
   exports: [BaileysGatewayService, BaileysSessionManagerService],
 })

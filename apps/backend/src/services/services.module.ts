@@ -14,6 +14,9 @@ import { ChatService } from './chat.service';
 import { InventoryOperationsService } from './inventory-operations.service';
 import { AiOrchestratorModule } from '../ai-orchestrator/ai-orchestrator.module';
 
+import { FinancialReportsService } from './financial-reports.service';
+import { ChartOfAccountSeedService } from '../domain/coa/chart-of-account-seed.service';
+
 @Global()
 @Module({
   imports: [AiOrchestratorModule],
@@ -31,6 +34,8 @@ import { AiOrchestratorModule } from '../ai-orchestrator/ai-orchestrator.module'
     CustomerService,
     InventoryOperationsService,
     ChatService,
+    FinancialReportsService,
+    ChartOfAccountSeedService,
   ],
   exports: [
     OrderProcessorService,
@@ -46,6 +51,8 @@ import { AiOrchestratorModule } from '../ai-orchestrator/ai-orchestrator.module'
     CustomerService,
     InventoryOperationsService,
     ChatService,
+    FinancialReportsService,
+    ChartOfAccountSeedService,
     AiOrchestratorModule,
   ],
 })

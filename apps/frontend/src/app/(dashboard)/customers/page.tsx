@@ -30,6 +30,9 @@ export default function CustomersPage() {
     try {
       const data = await api.getCustomers();
       setCustomers(data || []);
+    } catch (err: any) {
+      console.error("Failed to fetch customers:", err);
+      setMsg({ type: "error", text: err.message || "فشل تحميل قائمة العملاء" });
     } finally {
       setLoading(false);
     }

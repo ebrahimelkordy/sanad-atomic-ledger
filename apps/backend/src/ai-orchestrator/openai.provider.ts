@@ -7,6 +7,20 @@ import {
   TenantAIContext,
   ProcessChatResult,
 } from './ai-provider.interface';
+import {
+  preprocessUserMessage,
+  type VerticalHint,
+} from './preprocess-deterministic';
+
+const VERTICAL_RULES_OAI: Record<VerticalHint, string> = {
+  AUTO_WORKSHOP: 'أوردر قطع غيار/صيانة سيارات → SERVICE_ORDER. تسليم قطع للفني = INVENTORY_WITHDRAWAL.',
+  PHARMACY: 'صرف روشتة/أدوية لعميل = INVENTORY_WITHDRAWAL (ليس SALE!).',
+  RESTAURANT: 'توصيل أكل = SALE. تسليم مكونات لطباخ = INVENTORY_WITHDRAWAL.',
+  CONSTRUCTION: 'تسليم مواد بناء لموقع = INVENTORY_WITHDRAWAL. مقاول/شركة إنشاءات = ADD_CUSTOMER.',
+  ELECTRONICS: 'اصلاح هاتف = SERVICE_ORDER. فني يأخذ قطع غيار = INVENTORY_WITHDRAWAL.',
+  CHARITY: 'تبرعات = SETTLEMENT CREDIT للداعم + ADD_CUSTOMER للداعم أولًا.',
+  GENERAL_TRADE: '',
+};
 
 @Injectable()
 export class OpenAIProvider implements AIProvider {
@@ -72,56 +86,39 @@ Return ONLY a valid JSON object with the following schema:
     tenantContext: TenantAIContext,
     _attachments?: Array<{ mimeType: string; base64Data: string }>,
   ): Promise<ProcessChatResult> {
-    const systemPrompt = `أنت مساعد ذكي لنظام إدارة أعمال اسمه "سند".
-نوع نشاط التاجر: ${tenantContext.verticalType}.
+    // Preprocessor Deterministic: حساب كميات وأسعار مخزون + أطراف قبل الـ LLM
+    const preprocessed = preprocessUserMessage(messageText);
+    const verticalRules = VERTICAL_RULES_OAI[preprocessed.vertical] || '';
+    const factsBlock = preprocessed.summaryBulletPoints.join('\n');
 
-مهمتك هي تحليل الرسائل وتصنيفها إلى:
-- ADD_INVENTORY: إضافة منتج للمخزون (مثل: 5 كراتين محولات 12 فولت الكرتونة فيها 10 قطع سعر شراء الكرتونة 1200 وسعر بيع القطعة القطاعي 150 كود PWR-12 → الكمية=50، cost_price=120، unit_price=150، SKU=PWR-12)
-- SALE: تسجيل عملية بيع لعميل
-- ORDER: طلب شراء أو أوردر منتجات
-- SETTLEMENT: تسجيل مديونية أو دفعة أو تسوية مالية. استلمنا X من Y تحت الحساب = CREDIT لـ "Y" كامل. خصم للعميل = DEBIT. باقي فاتورة مؤجل = DEBIT. سداد مورد (حولنا للمورد شركة التقنية 3000 من فودافون كاش) = DEBIT لـ "شركة التقنية".
-- EXPENSE: مصروف فعلي فقط (فاتورة كهرباء / غداء عمال / شحن بنزين / هالك وتالف) — المنتجات للسحوبات والعهدة والسلفة والمخزون مش مصروفات أبداً.
-- RETURN_TO_INVENTORY: إرجاع منتج للمخزون
-- ADD_EMPLOYEE: إضافة موظف جديد بالاسم والوظيفة والراتب مع تفعيل الحضور التلقائي + phone لحقل التليفون (صيغ: "عامل جديد اسمه (عاطف الشرقاوي) ووظيفته فني كهرباء ورقم تليفونه 01xxxxxxx")
-- EMPLOYEE_ATTENDANCE: تسجيل حضور (PRESENT) أو غياب (ABSENT) أو تأخير/استئذان (HALF_DAY). غاب بدون إذن → ABSENT + EMPLOYEE_ADVANCE DEDUCTION ليوم واحد.
-- EMPLOYEE_ADVANCE: سلفة (ADVANCE) أو خصم (DEDUCTION) أو مكافأة (BONUS) لموظف
-- INVENTORY_WITHDRAWAL: عهدة ومسحوبات موظف من المخزون (موظف X أخذ 2 محول وطقم شانيور — استخرج كل منتج في withdrawal لوحده)
-- ADD_CUSTOMER: إضافة عميل / مورد / داعم / متبرع / مستفيد / مقدم خدمة جديد
-- SERVICE_ORDER: افتح طلب خدمة/صيانة / سند جديد (الحقول: title=الاسم، category=التصنيف، priority=الأولوية (عاجل/عادي)، leadTechnician=الفني الرئيسي أو مقدم الخدمة، assistantTechnician=المساعد أو الأدمن المسؤول)
-- MULTI_ACTION: عندما يحتوي الطلب على أكثر من أمر واحد
-- UNKNOWN: رسالة عامة أو استفسار
+    const systemPrompt = `أنت مساعد ذكي لنظام "سند" — نوع النشاط: ${tenantContext.verticalType}.
+الرد دائماً JSON وبالعربي.
 
-=== قواعد مهمة جداً (لازم تطبقها):
-1. رد دايماً بالعربي وبأسلوب ودي ومهني
-2. لو طلب المستخدم يحتوي على أوامر متعددة استخرجها كـ MULTI_ACTION مع أوبجكت actions كامل — مهم جداً لا تجمع أكثر من أمر في واحدة
-3. **فرز أوامر إجباري:** ADD_EMPLOYEE → ADD_CUSTOMER → ADD_INVENTORY → EMPLOYEE_ATTENDANCE → INVENTORY_WITHDRAWAL → SALE/ORDER → EMPLOYEE_ADVANCE → SETTLEMENT → EXPENSE → RETURN_TO_INVENTORY → SERVICE_ORDER
-4. لو ذكر اسم موظف في أي أمر ومش موجود → أضف ADD_EMPLOYEE أولًا تلقائياً (وظيفة افتراضية "عامل")
-5. لو ذكر اسم عميل/مورد/داعم في التسوية ولم يكن موجود → أضف ADD_CUSTOMER أولًا
-6. **aliases و titles:** "أبو علي (اللي هو سيف الدين)" → الاسم الحقيقي هو "سيف الدين" دائماً و"أبو علي" هو alias. "الأسطة عاطف ده" = عاطف الشرقاوي. كلمات مثل "الأسطة", "أستاذ", "باشا", "ابو/أبو", "عم", "ده/دي" كلها titles تشال من الاسم. **مهم جداً: "حضر بس" = الفعل حضر + كلمة بس، مش جزء من اسم الموظف اطلاقاً.**
-7. **الـ clauses المعقدة:** لو جملة واحدة فيها أكتر من فعل → افصلها لأكتر من action. لو فيه "أخذ X و Y وبعد رجّع X وسحب بداله وتالف" → استخرج: (1) مسحوبات X و Y، (2) إرجاع X، (3) بديل/مسحوبة X الجديدة، (4) هالك/تالف X. لا تحذف المسحوبات الأصلية أبداً.
-8. **دفعة + خصم + باقي مؤجل لنفس الطرف:** افصلهم 3 SETTLEMENT منفصلة: (1) دفعة سداد CREDIT، (2) خصم DEBIT، (3) باقي فاتورة مؤجل DEBIT. لكلهم نفس الطرف.
-9. **أرقام التليفون:** أي رقم يبدأ بـ 01 وطوله 11 رقم = تليفون. ضيفه في الحقل phone لـ ADD_EMPLOYEE / ADD_CUSTOMER. لا تحسبه أبداً كمبلغ.
-10. **الأفرتايم:** "حضر وأخد 3 ساعات أفرتايم" = EMPLOYEE_ATTENDANCE PRESENT فقط.
-11. **المخزن بالجملة:** سعر شراء الكرتونة = cost_price مقسوماً على عدد القطع في الكرتونة لو معطى. سعر بيع القطعة القطاعي = unit_price. الكمية = عدد الكراتين × عدد القطع في الكرتونة.
-12. **الهالك والتالف:** "محول محروق سجله في الهالك" = EXPENSE category "أخرى" مع notes "هالك/تالف/scrap".
+=== التصنيفات:
+ADD_INVENTORY | SALE | ORDER | SETTLEMENT | EXPENSE | RETURN_TO_INVENTORY
+ADD_EMPLOYEE (موظف/عامل/فني) | ADD_CUSTOMER (عميل/مورد/داعم/شركة/مؤسسة)
+EMPLOYEE_ATTENDANCE | EMPLOYEE_ADVANCE | INVENTORY_WITHDRAWAL (items[] لأكثر من صنف!)
+SERVICE_ORDER | MULTI_ACTION (>1 أمر) | UNKNOWN
 
-أرجع JSON حرفياً بالـ schema ده:
-{
-  "intent": "ADD_INVENTORY|SALE|ORDER|SETTLEMENT|EXPENSE|RETURN_TO_INVENTORY|ADD_EMPLOYEE|EMPLOYEE_ATTENDANCE|EMPLOYEE_ADVANCE|INVENTORY_WITHDRAWAL|ADD_CUSTOMER|SERVICE_ORDER|MULTI_ACTION|UNKNOWN",
-  "reply": "الرد بالعربي",
-  "requiresConfirmation": true,
-  "extractedData": {
-    "actions": [
-      {
-        "intent": "...",
-        "description": "وصف الأمر بالعربي",
-        "extractedData": { ... حقول هذا النوع من الأوامر ... }
-      }
-    ]
-  }
-}
+=== 10 قواعد إلزامية:
+1. MULTI_ACTION فرز: ADD_EMPLOYEE → ADD_CUSTOMER → ADD_INVENTORY → EMPLOYEE_ATTENDANCE → INVENTORY_WITHDRAWAL → SALE → EMPLOYEE_ADVANCE → SETTLEMENT → EXPENSE → RETURN_TO_INVENTORY → SERVICE_ORDER
+2. ⛔ شركة/مستشفى/فندق/مقاول/مؤسسة = ADD_CUSTOMER دائماً (لا ADD_EMPLOYEE أبداً حتى لو جاء "شركة كذا أخذ حاجة")
+3. ⛔ كل اسم طرف في SETTLEMENT/ORDER/SALE يسبقه ADD_CUSTOMER أولًا — حتى لو لم يصرح المستخدم بإضافته.
+4. موظف/عميل مذكور وغير مضاف → أضفه تلقائيًا أولاً.
+5. "أخذ X+Y ورجع X وسحب بداله وتالف" → (1) INVENTORY_WITHDRAWAL X+Y (2) RETURN X (3) بديل INVENTORY_WITHDRAWAL X (4) EXPENSE هالك X.
+6. دفعة + خصم + باقي مؤجل = 3 SETTLEMENTs.
+7. أسماء كاملة: "شركة التقنية" / "أستاذ سامح" ولا تقطع. Titles تشال إلا إذا كانت جزءًا متأصلًا: "أستاذ سامح" → الاسم كامل "أستاذ سامح".
+8. هاتف: 01xxxxxxxxxx ضيفه في phone (لا كمبلغ!).
+9. ⛔ كميات/أسعار المخزون: استخدم PREPROCESSED FACTS فقط حصرًا ولا تخمن!
+10. مسحوبات لأكثر من صنف لشخص واحد = INVENTORY_WITHDRAWAL واحد + items[] (لا تفصلهم!). مثال: "أخذ فلتر×4+إطار×1" → items: [{FLT qty4}, {TIR qty1}].
 
-الرسالة للمستخدم: "${messageText}"`;
+${verticalRules ? '=== قواعد خاصة بالنشاط:\n' + verticalRules : ''}
+
+=== 🚨 PREPROCESSED FACTS (100% صحيحة — استخدمها حصرًا ولا تخمن!):
+${factsBlock}
+
+أرجع JSON:
+{"intent":"MULTI_ACTION","reply":"الرد العربي مع قائمة الأوامر + طلب تأكيد","requiresConfirmation":true,"extractedData":{"actions":[{"intent":"...","description":"وصف عربي","extractedData":{...}}]}}`;
 
     try {
       const response = await this.openai.chat.completions.create({
@@ -131,6 +128,8 @@ Return ONLY a valid JSON object with the following schema:
           { role: 'user', content: messageText },
         ],
         response_format: { type: 'json_object' },
+        temperature: 0.1,
+        max_tokens: 3500,
       });
 
       const responseText = response.choices[0].message.content || '{}';

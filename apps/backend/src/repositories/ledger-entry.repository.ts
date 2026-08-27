@@ -31,6 +31,7 @@ export class LedgerEntryRepository {
     return tx.ledgerEntry.create({
       data: {
         tenant_id: entryData.tenant_id,
+        party_type: 'GENERAL',
         party_identifier: entryData.party_identifier,
         entry_type: entryData.entry_type,
         amount: entryData.amount,

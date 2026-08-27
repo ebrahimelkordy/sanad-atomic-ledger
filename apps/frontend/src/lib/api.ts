@@ -9,6 +9,20 @@ function getToken(): string | null {
   return localStorage.getItem('cipher_token');
 }
 
+function clearAuthAndRedirect() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem('cipher_token');
+    document.cookie = 'cipher_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax';
+  } catch {
+    // ignore
+  }
+  const currentPath = window.location.pathname;
+  if (!currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
+    window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+  }
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -22,7 +36,17 @@ async function request<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  } catch (netErr: any) {
+    throw new Error(netErr?.message || 'فشل الاتصال بالخادم');
+  }
+
+  if (res.status === 401) {
+    clearAuthAndRedirect();
+    throw new Error('جلسة العمل منتهية أو غير مصرح لك بالوصول. يرجى تسجيل الدخول مجدداً.');
+  }
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: res.statusText }));
@@ -164,6 +188,36 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(dto),
     }),
+
+  updateEmployeeRate: (id: string, dto: {
+    new_rate: number;
+    change_reason: 'PROMOTION' | 'ANNUAL_RAISE' | 'MERIT_BONUS' | 'CORRECTION' | 'OTHER';
+    salary_type?: 'MONTHLY' | 'DAILY';
+    notes?: string;
+    effective_date?: string;
+  }) =>
+    request<any>(`/employees/${id}/rate`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    }),
+
+  getEmployeeRateHistory: (id: string) =>
+    request<any[]>(`/employees/${id}/rate-history`),
+
+  updateProductPrice: (id: string, dto: {
+    new_unit_price?: number;
+    new_cost_price?: number;
+    change_reason: 'SUPPLIER_INCREASE' | 'MARKET_REPRICE' | 'PERIODIC_REVIEW' | 'CORRECTION' | 'OTHER';
+    notes?: string;
+    effective_date?: string;
+  }) =>
+    request<any>(`/inventory/${id}/price`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    }),
+
+  getProductPriceHistory: (id: string) =>
+    request<any[]>(`/inventory/${id}/price-history`),
 
   // Customers
   getCustomers: () => request<any[]>('/customers'),

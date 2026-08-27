@@ -4,14 +4,23 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useRouter } from 'next/navigation';
 
 // دالة مساعدة لتعيين الكوكي
-function setCookie(name: string, value: string, days = 7) {
+export function setCookie(name: string, value: string, days = 7) {
+  if (typeof document === 'undefined') return;
   const expires = new Date(Date.now() + days * 864e5).toUTCString();
   document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
 }
 
 // دالة مساعدة لحذف الكوكي
-function removeCookie(name: string) {
+export function removeCookie(name: string) {
+  if (typeof document === 'undefined') return;
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+}
+
+export function clearAuthSession() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('cipher_token');
+    removeCookie('cipher_token');
+  }
 }
 
 interface AuthContextType {
@@ -20,21 +29,30 @@ interface AuthContextType {
   login: (token: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // محاولة قراءة التوكن من localStorage أولاً، ثم من cookies كـ fallback
-    const stored = localStorage.getItem('cipher_token');
-    if (stored) {
-      setToken(stored);
-      // مزامنة مع الكوكيز للميدل وير
-      setCookie('cipher_token', stored);
+    try {
+      const stored = localStorage.getItem('cipher_token');
+      if (stored && stored.trim() !== '' && stored !== 'undefined' && stored !== 'null') {
+        setToken(stored);
+        setCookie('cipher_token', stored);
+      } else {
+        setToken(null);
+        clearAuthSession();
+      }
+    } catch {
+      setToken(null);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -45,16 +63,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('cipher_token');
-    removeCookie('cipher_token');
+    clearAuthSession();
     setToken(null);
     router.push('/login');
   };
 
-  // دائمًا نغلف children بـ Provider حتى لا يحدث خطأ useAuth must be used inside AuthProvider
-  // قبل التحميل، القيمة تكون token = null (غير مصادق)
   return (
-    <AuthContext.Provider value={{ token, user: token ? { phone_number: 'التاجر', role: 'تاجر' } : null, login, logout, isAuthenticated: !!token }}>
+    <AuthContext.Provider
+      value={{
+        token,
+        user: token ? { phone_number: 'التاجر', role: 'تاجر' } : null,
+        login,
+        logout,
+        isAuthenticated: !!token,
+        isLoading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -65,3 +89,4 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
   return ctx;
 }
+

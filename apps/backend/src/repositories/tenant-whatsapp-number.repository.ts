@@ -46,4 +46,19 @@ export class TenantWhatsAppNumberRepository {
       where: { tenant_id: tenantId },
     });
   }
+
+  /**
+   * Returns all registered WhatsApp numbers across all tenants.
+   * Used by WhatsappBootstrapService on application startup to restore
+   * active Baileys sessions. Includes numbers that were previously
+   * connected or pending, so they can be re-registered on restart.
+   */
+  async findAllConnectable(): Promise<TenantWhatsAppNumber[]> {
+    return this.prisma.tenantWhatsAppNumber.findMany({
+      where: {
+        connection_status: { not: 'DISCONNECTED' },
+      },
+      orderBy: { tenant_id: 'asc' },
+    });
+  }
 }

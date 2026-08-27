@@ -10,7 +10,7 @@ export class ChatController {
 
   @Get('history')
   async getHistory(@Req() req: AuthenticatedRequest) {
-    const tenantId = req.user.tenant_id;
+    const tenantId = req.principal.tenantId;
     return this.chatService.getHistory(tenantId);
   }
 
@@ -20,7 +20,7 @@ export class ChatController {
     @Body('message') message: string,
     @Body('attachments') attachments?: ChatAttachment[],
   ) {
-    const tenantId = req.user.tenant_id;
+    const tenantId = req.principal.tenantId;
     const tenantContext = {
       tenantId,
       verticalType: 'RETAIL_WHOLESALE',
@@ -41,8 +41,8 @@ export class ChatController {
     @Body('actionData') actionData: Record<string, unknown>,
     @Body('msgId') msgId?: string,
   ) {
-    const tenantId = req.user.tenant_id;
-    const requestedBy = req.user.user_id || req.user.tenant_id;
+    const tenantId = req.principal.tenantId;
+    const requestedBy = req.principal.userId || req.principal.tenantId;
 
     return this.chatService.confirmAction(
       tenantId,

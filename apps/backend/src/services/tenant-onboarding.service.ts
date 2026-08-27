@@ -4,11 +4,14 @@ import { TenantRepository } from '../repositories/tenant.repository';
 import { TenantWhatsAppNumberRepository } from '../repositories/tenant-whatsapp-number.repository';
 import * as bcrypt from 'bcrypt';
 
+import { ChartOfAccountSeedService } from '../domain/coa/chart-of-account-seed.service';
+
 @Injectable()
 export class TenantOnboardingService {
   constructor(
     private readonly tenantRepository: TenantRepository,
     private readonly tenantWhatsAppNumberRepository: TenantWhatsAppNumberRepository,
+    private readonly coaSeedService: ChartOfAccountSeedService,
   ) {}
 
   async onboardTenant(
@@ -34,6 +37,9 @@ export class TenantOnboardingService {
       firstPhoneNumber,
       numberRole,
     );
+
+    // Seed default double-entry Chart of Accounts for new tenant
+    await this.coaSeedService.seedDefaultAccounts(tenant.id).catch(() => {/* best-effort */});
 
     return tenant;
   }

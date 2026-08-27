@@ -10,13 +10,13 @@ export class CustomerController {
 
   @Get()
   async getCustomers(@Req() req: AuthenticatedRequest) {
-    const tenantId = req.user.tenant_id;
+    const tenantId = req.principal.tenantId;
     return this.customerService.getCustomers(tenantId);
   }
 
   @Get(':id')
   async getCustomerById(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
-    const tenantId = req.user.tenant_id;
+    const tenantId = req.principal.tenantId;
     return this.customerService.getCustomerById(tenantId, id);
   }
 
@@ -29,13 +29,15 @@ export class CustomerController {
     @Body('location_address') location_address: string,
     @Body('notes') notes: string,
   ) {
-    const tenantId = req.user.tenant_id;
-    return this.customerService.createCustomer(tenantId, {
+    const tenantId = req.principal.tenantId;
+    const res = await this.customerService.createCustomer(tenantId, {
       name,
       phone,
       whatsapp,
       location_address,
       notes,
     });
+    return { ...res.customer, created: res.created };
   }
 }
+

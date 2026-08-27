@@ -300,24 +300,25 @@ export class SettlementService {
   }
 
   private recalculate(entries: Array<EntryLike>) {
-    const toAmountNumber = (amount: AmountLike): number => {
-      if (typeof amount === 'number') return amount;
-      return Number(amount.toString());
+    const toDecimal = (amount: AmountLike): Prisma.Decimal => {
+      if (amount instanceof Prisma.Decimal) return amount;
+      return new Prisma.Decimal(amount.toString());
     };
 
-    const total_debit = entries
-      .filter((e) => e.entry_type === 'DEBIT')
-      .reduce((acc, e) => acc + toAmountNumber(e.amount), 0);
+    let total_debit = new Prisma.Decimal(0);
+    let total_credit = new Prisma.Decimal(0);
+    let running_balance = new Prisma.Decimal(0);
 
-    const total_credit = entries
-      .filter((e) => e.entry_type === 'CREDIT')
-      .reduce((acc, e) => acc + toAmountNumber(e.amount), 0);
-
-    const running_balance = entries.reduce((acc, e) => {
-      const amount = toAmountNumber(e.amount);
-      if (e.entry_type === 'DEBIT') return acc - amount;
-      return acc + amount;
-    }, 0);
+    for (const e of entries) {
+      const amt = toDecimal(e.amount);
+      if (e.entry_type === 'DEBIT') {
+        total_debit = total_debit.plus(amt);
+        running_balance = running_balance.minus(amt);
+      } else {
+        total_credit = total_credit.plus(amt);
+        running_balance = running_balance.plus(amt);
+      }
+    }
 
     return { total_debit, total_credit, running_balance };
   }

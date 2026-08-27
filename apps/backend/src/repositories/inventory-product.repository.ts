@@ -4,7 +4,7 @@
  *   - DETERMINISTIC INVENTORY: عدم افتراض كمية = 1 أبداً كمصدر وحيد للكمية.
  */
 import { Injectable } from '@nestjs/common';
-import { InventoryProduct, Prisma } from '@prisma/client';
+import { InventoryProduct, Prisma, PriceChangeReason } from '@prisma/client';
 import { PrismaService } from './prisma.service';
 import {
   InventoryProductCreateSchema,
@@ -202,6 +202,71 @@ export class InventoryProductRepository {
     return client.inventoryProduct.update({
       where: { id: productId },
       data: { current_stock: { increment: quantity } },
+    });
+  }
+
+  async updatePriceWithHistory(
+    data: {
+      productId: string;
+      newUnitPrice?: number;
+      newCostPrice?: number;
+      changeReason: PriceChangeReason;
+      notes?: string;
+      effectiveDate?: Date;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    const runInTx = async (prismaTx: Prisma.TransactionClient) => {
+      const product = await prismaTx.inventoryProduct.findUnique({
+        where: { id: data.productId },
+      });
+      if (!product) {
+        throw new Error('المنتج غير موجود');
+      }
+
+      const oldUnitPrice = product.unit_price;
+      const oldCostPrice = product.cost_price;
+      const newUnitPrice = data.newUnitPrice !== undefined ? data.newUnitPrice : Number(oldUnitPrice);
+      const newCostPrice = data.newCostPrice !== undefined ? data.newCostPrice : Number(oldCostPrice);
+      const effectiveDate = data.effectiveDate || new Date();
+
+      // 1) تحديث المنتج بالأسعار الجديدة (بدون المساس بالمبيعات أو الطلبيات السابقة)
+      const updatedProduct = await prismaTx.inventoryProduct.update({
+        where: { id: data.productId },
+        data: {
+          unit_price: newUnitPrice,
+          cost_price: newCostPrice,
+        },
+      });
+
+      // 2) حفظ السجل التاريخي للتغيير
+      const historyRecord = await prismaTx.productPriceHistory.create({
+        data: {
+          product_id: data.productId,
+          old_unit_price: oldUnitPrice,
+          new_unit_price: newUnitPrice,
+          old_cost_price: oldCostPrice,
+          new_cost_price: newCostPrice,
+          change_reason: data.changeReason,
+          notes: data.notes || null,
+          effective_date: effectiveDate,
+        },
+      });
+
+      return { product: updatedProduct, historyRecord };
+    };
+
+    if (tx) {
+      return runInTx(tx);
+    }
+    return this.prisma.$transaction(runInTx);
+  }
+
+  async getPriceHistory(productId: string, tx?: Prisma.TransactionClient) {
+    const client = tx ?? this.prisma;
+    return client.productPriceHistory.findMany({
+      where: { product_id: productId },
+      orderBy: { created_at: 'desc' },
     });
   }
 }

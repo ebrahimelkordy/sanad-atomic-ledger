@@ -3,22 +3,27 @@ version: '3.8'
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: sanad_postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: cipher
-      POSTGRES_USER: cipher
-      POSTGRES_PASSWORD: cipher_secret
+      POSTGRES_DB: sanad_db
+      POSTGRES_USER: sanad_user
+      POSTGRES_PASSWORD: sanad_secure_password
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cipher"]
+      test: ["CMD-SHELL", "pg_isready -U sanad_user -d sanad_db"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
+    container_name: sanad_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
@@ -33,29 +38,35 @@ services:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
+    container_name: sanad_backend
+    restart: unless-stopped
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: postgresql://cipher:cipher_secret@postgres:5432/cipher
+      DATABASE_URL: postgresql://sanad_user:sanad_secure_password@postgres:5432/sanad_db
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_URL: ${REDIS_URL:-}
-      AI_PROVIDER: ${AI_PROVIDER:-local}
+      REDIS_URL: redis://redis:6379
+      ENABLE_QUEUE: "true"
+      AI_PROVIDER: ${AI_PROVIDER:-groq}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
       PORT: "3001"
+      NODE_ENV: production
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - baileys_sessions:/app/apps/backend/sessions
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   postgres_data:
   redis_data:
-  baileys_sessions:
-

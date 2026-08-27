@@ -9,7 +9,10 @@ import { FieldWorkerRepository } from '../repositories/field-worker.repository';
 import { CustomerRepository } from '../repositories/customer.repository';
 import { PrismaService } from '../repositories/prisma.service';
 import { InventoryOperationsService } from './inventory-operations.service';
-import { classifyDomainRole, ExpenseSchema } from '../validation';
+import {
+  classifyDomainRole,
+  ExpenseSchema,
+} from '../validation';
 import type { TenantAIContext } from '../ai-orchestrator/ai-provider.interface';
 
 export type ChatAttachment = {
@@ -311,6 +314,80 @@ export class ChatService {
           return { reply: `ℹ️ العميل "${customer.name}" موجود بالفعل.`, success: true };
         }
 
+        // ========== UPDATE_EMPLOYEE_RATE (ترقية / علاوة / تعديل غير رجعي) ==========
+        case 'UPDATE_EMPLOYEE_RATE': {
+          const empName = (actionData['employeeName'] as string) || (actionData['name'] as string) || '';
+          const newRate = Number(actionData['newRate'] || actionData['new_rate'] || actionData['rate'] || 0);
+          const reasonRaw = String(actionData['changeReason'] || actionData['reason'] || 'PROMOTION');
+          const notes = (actionData['notes'] as string) || undefined;
+
+          if (!empName) return { reply: '❌ اسم الموظف مطلوب لتحديث المرتب.', success: false };
+          if (newRate <= 0) return { reply: '❌ المعدل/المرتب الجديد يجب أن يكون أكبر من صفر.', success: false };
+
+          const emp = await this.employeeRepository.findByName(tenantId, empName);
+          if (!emp) {
+            return { reply: `❌ لم يتم العثور على الموظف "${empName}".`, success: false };
+          }
+
+          let changeReason: any = 'PROMOTION';
+          if (reasonRaw.includes('سنوية') || reasonRaw.includes('علاوة')) changeReason = 'ANNUAL_RAISE';
+          else if (reasonRaw.includes('مكافأة') || reasonRaw.includes('أداء')) changeReason = 'MERIT_BONUS';
+          else if (reasonRaw.includes('تصحيح')) changeReason = 'CORRECTION';
+          else if (reasonRaw.includes('ترقية')) changeReason = 'PROMOTION';
+          else changeReason = 'OTHER';
+
+          const { employee, historyRecord } = await this.employeeRepository.updateRateWithHistory({
+            employeeId: emp.id,
+            newRate,
+            changeReason,
+            notes: notes || `تحديث غير رجعي إلى ${newRate}`,
+            appliedBy: requestedBy,
+          });
+
+          return {
+            reply: `📈 تم تسجيل التعديل غير الرجعي لـ "${employee.name}": المرتب/المعدل السابق (${Number(historyRecord.old_rate)}) → الجديد (${Number(employee.base_rate)}) | السبب: ${changeReason}.`,
+            success: true,
+          };
+        }
+
+        // ========== UPDATE_PRODUCT_PRICE (زيادة/تعديل أسعار غير رجعي) ==========
+        case 'UPDATE_PRODUCT_PRICE': {
+          const prodName = (actionData['productName'] as string) || (actionData['name'] as string) || (actionData['sku'] as string) || '';
+          const newUnitPrice = actionData['newUnitPrice'] !== undefined ? Number(actionData['newUnitPrice']) : (actionData['unit_price'] !== undefined ? Number(actionData['unit_price']) : undefined);
+          const newCostPrice = actionData['newCostPrice'] !== undefined ? Number(actionData['newCostPrice']) : (actionData['cost_price'] !== undefined ? Number(actionData['cost_price']) : undefined);
+          const reasonRaw = String(actionData['changeReason'] || actionData['reason'] || 'SUPPLIER_INCREASE');
+          const notes = (actionData['notes'] as string) || undefined;
+
+          if (!prodName) return { reply: '❌ اسم المنتج أو الـ SKU مطلوب لتحديث السعر.', success: false };
+
+          let products = await this.inventoryProductRepository.findByTenantAndName(tenantId, prodName);
+          let product = products[0] || (await this.inventoryProductRepository.findByTenantAndSku(tenantId, prodName)) || null;
+
+          if (!product) {
+            return { reply: `❌ لم يتم العثور على المنتج "${prodName}".`, success: false };
+          }
+
+          let changeReason: any = 'SUPPLIER_INCREASE';
+          if (reasonRaw.includes('مورد') || reasonRaw.includes('زيادة')) changeReason = 'SUPPLIER_INCREASE';
+          else if (reasonRaw.includes('سوق')) changeReason = 'MARKET_REPRICE';
+          else if (reasonRaw.includes('مراجعة')) changeReason = 'PERIODIC_REVIEW';
+          else if (reasonRaw.includes('تصحيح')) changeReason = 'CORRECTION';
+          else changeReason = 'OTHER';
+
+          const { product: updated, historyRecord } = await this.inventoryProductRepository.updatePriceWithHistory({
+            productId: product.id,
+            newUnitPrice,
+            newCostPrice,
+            changeReason,
+            notes: notes || `تحديث أسعار غير رجعي`,
+          });
+
+          return {
+            reply: `🏷️ تم تحديث سعر المنتج "${updated.name}" بصفة غير رجعية: سعر البيع (${Number(historyRecord.old_unit_price)} → ${Number(updated.unit_price)}) | التكلفة (${Number(historyRecord.old_cost_price)} → ${Number(updated.cost_price)}) | المعاملات السابقة محفوظة كما هي.`,
+            success: true,
+          };
+        }
+
         // ========== MULTI_ACTION ==========
         case 'MULTI_ACTION': {
           const originalActions =
@@ -365,7 +442,11 @@ export class ChatService {
               act.intent === 'EMPLOYEE_ADVANCE' ||
               act.intent === 'INVENTORY_WITHDRAWAL'
             ) {
-              const emp = (d['employeeName'] as string) || '';
+              const emp =
+                (d['technician'] as string) ||
+                (d['employee'] as string) ||
+                (d['employeeName'] as string) ||
+                '';
               if (emp && !existingSet.has(emp.trim().toLowerCase())) {
                 const role = classifyDomainRole({ name: emp });
                 const defaultJob =
@@ -385,7 +466,7 @@ export class ChatService {
               }
             }
             if (act.intent === 'SETTLEMENT') {
-              const p = (d['partyIdentifier'] as string) || '';
+              const p = (d['partyIdentifier'] as string) || (d['customer'] as string) || '';
               if (p && !custSet.has(p.trim().toLowerCase())) {
                 autoActions.push({
                   intent: 'ADD_CUSTOMER',
@@ -396,14 +477,20 @@ export class ChatService {
               }
             }
             if (act.intent === 'INVENTORY_WITHDRAWAL') {
-              const items = d['items'] as Array<{ productNameOrSku: string; quantity: number }>;
+              const items = d['items'] as Array<any>;
               const pns: string[] = [];
-              if (items && items.length) items.forEach((i) => pns.push(i.productNameOrSku));
-              else if (d['productName']) pns.push(d['productName'] as string);
+              if (items && items.length) {
+                items.forEach((i) => {
+                  const name = i.productNameOrSku || i.name || i.productName;
+                  if (name) pns.push(name);
+                });
+              } else if (d['productName'] || d['name']) {
+                pns.push((d['productName'] || d['name']) as string);
+              }
               for (const pn of pns) {
                 const key = pn.trim().toLowerCase();
                 const qty =
-                  items?.find((i) => i.productNameOrSku === pn)?.quantity ||
+                  items?.find((i) => (i.productNameOrSku || i.name || i.productName) === pn)?.quantity ||
                   Number(d['quantity'] || 1);
                 if (pn && !prodSet.has(key)) {
                   autoActions.push({
@@ -572,22 +659,30 @@ export class ChatService {
 
         // ========== INVENTORY_WITHDRAWAL (TRANSACTION — ATOMIC!) ==========
         case 'INVENTORY_WITHDRAWAL': {
-          const empName = (actionData['employeeName'] as string) || '';
+          const empName =
+            (actionData['technician'] as string) ||
+            (actionData['employee'] as string) ||
+            (actionData['employeeName'] as string) ||
+            '';
           const emp = await this.prisma.employee.findFirst({
             where: { tenant_id: tenantId, name: { contains: empName, mode: 'insensitive' } },
           });
           if (!emp) return { reply: `❌ لم يتم العثور على "${empName}".`, success: false };
 
           const rawItems =
-            actionData['items'] as Array<{ productNameOrSku: string; quantity: number }> | undefined;
+            actionData['items'] as Array<any> | undefined;
           let itemsToWithdraw: Array<{ productNameOrSku: string; quantity: number }> = [];
 
           if (rawItems && rawItems.length > 0) {
-            itemsToWithdraw = rawItems.filter(
-              (it) => it && it.productNameOrSku && it.productNameOrSku.trim(),
-            );
+            itemsToWithdraw = rawItems
+              .map((it) => ({
+                productNameOrSku: (it?.productNameOrSku || it?.name || it?.productName || '').trim(),
+                quantity: Number(it?.quantity || 1),
+              }))
+              .filter((it) => Boolean(it.productNameOrSku));
           } else {
-            const productName = (actionData['productName'] as string) || '';
+            const productName =
+              (actionData['productName'] as string) || (actionData['name'] as string) || '';
             const quantity = Number(actionData['quantity'] || 1);
             if (productName) itemsToWithdraw = [{ productNameOrSku: productName, quantity }];
           }

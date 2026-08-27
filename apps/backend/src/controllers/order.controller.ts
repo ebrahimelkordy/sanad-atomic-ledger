@@ -16,7 +16,7 @@ export class OrderController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    const tenantId = req.user.tenant_id;
+    const tenantId = req.principal.tenantId;
     return this.orderQuery.getOrders(tenantId, {
       status,
       search,
@@ -30,7 +30,8 @@ export class OrderController {
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
-    const tenantId = req.user.tenant_id;
+    const tenantId = req.principal.tenantId;
     return this.orderQuery.getOrderById(tenantId, id);
   }
 }
+
